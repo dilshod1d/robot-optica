@@ -1,0 +1,39 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/product_model.dart';
+
+class InventoryService {
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  CollectionReference<Map<String, dynamic>> _productsRef(String opticaId) {
+    return _db.collection('opticas').doc(opticaId).collection('products');
+  }
+
+  Stream<List<ProductModel>> watchProducts(String opticaId) {
+    return _productsRef(opticaId)
+        .orderBy('name')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        return ProductModel.fromFirestore(doc, opticaId);
+      }).toList();
+    });
+  }
+
+  Future<void> upsertProduct({
+    required String opticaId,
+    required ProductModel product,
+  }) async {
+    await _productsRef(opticaId).doc(product.id).set(product.toMap());
+  }
+
+  Future<void> updateStock({
+    required String opticaId,
+    required String productId,
+    required int delta,
+  }) async {
+    await _productsRef(opticaId).doc(productId).update({
+      'stockQty': FieldValue.increment(delta),
+      'updatedAt': Timestamp.now(),
+    });
+  }
+}

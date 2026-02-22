@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "789024738939",
+    "project_id": "robot-optica",
+    "storage_bucket": "robot-optica.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:789024738939:android:437f2bf57d09cfb8591cde",
+        "android_client_info": {
+          "package_name": "com.example.robot_optica"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyByo_wgoEqQk5qV_tbUFS0uI7Xu-j0tG2g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
