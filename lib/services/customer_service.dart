@@ -29,6 +29,103 @@ class CustomerService {
   }
 
   // ========================
+  // CASCADE DELETE CUSTOMER
+  // ========================
+  Future<void> deleteCustomerCascade({
+    required String opticaId,
+    required String customerId,
+  }) async {
+    final opticaRef = _db.collection('opticas').doc(opticaId);
+
+    await _deleteByQuery(
+      opticaRef.collection('visits').where('customerId', isEqualTo: customerId),
+    );
+
+    await _deleteByQuery(
+      opticaRef
+          .collection('eye_analyses')
+          .where('customerId', isEqualTo: customerId),
+    );
+
+    await _deleteByQuery(
+      opticaRef
+          .collection('care_plans')
+          .where('customerId', isEqualTo: customerId),
+    );
+
+    await _deleteBillingsAndPayments(
+      opticaId: opticaId,
+      customerId: customerId,
+    );
+
+    await _deleteByQuery(
+      opticaRef
+          .collection('sms_logs')
+          .where('customerId', isEqualTo: customerId),
+    );
+
+    await _customerRef(opticaId).doc(customerId).delete();
+  }
+
+  Future<void> _deleteBillingsAndPayments({
+    required String opticaId,
+    required String customerId,
+  }) async {
+    const batchSize = 300;
+    final billingsRef =
+        _db.collection('opticas').doc(opticaId).collection('billings');
+
+    while (true) {
+      final snapshot = await billingsRef
+          .where('customerId', isEqualTo: customerId)
+          .limit(batchSize)
+          .get();
+
+      if (snapshot.docs.isEmpty) break;
+
+      for (final doc in snapshot.docs) {
+        await _deleteCollection(doc.reference.collection('payments'));
+      }
+
+      final batch = _db.batch();
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+  }
+
+  Future<void> _deleteByQuery(Query<Map<String, dynamic>> query) async {
+    const batchSize = 300;
+    while (true) {
+      final snapshot = await query.limit(batchSize).get();
+      if (snapshot.docs.isEmpty) break;
+
+      final batch = _db.batch();
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+  }
+
+  Future<void> _deleteCollection(
+    CollectionReference<Map<String, dynamic>> ref,
+  ) async {
+    const batchSize = 300;
+    while (true) {
+      final snapshot = await ref.limit(batchSize).get();
+      if (snapshot.docs.isEmpty) break;
+
+      final batch = _db.batch();
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+  }
+
+  // ========================
   // GET SINGLE CUSTOMER
   // ========================
   Future<CustomerModel?> getCustomer({

@@ -1,16 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../widgets/common/app_loader.dart';
+import '../../utils/scan_sound.dart';
 
 class BarcodeScannerScreen extends StatefulWidget {
   final String title;
   final String hint;
+  final bool closeOnScan;
+  final String? Function(String code)? onScan;
+  final bool showDoneButton;
 
   const BarcodeScannerScreen({
     super.key,
     this.title = "Shtrix-kodni skanerlash",
     this.hint = "Kamerani shtrix-kodga yo'naltiring",
+    this.closeOnScan = true,
+    this.onScan,
+    this.showDoneButton = false,
   });
 
   @override
@@ -18,11 +26,16 @@ class BarcodeScannerScreen extends StatefulWidget {
 }
 
 class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
-  final MobileScannerController _controller = MobileScannerController();
+  final MobileScannerController _controller = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+  );
   bool _found = false;
   bool _checkingPermission = true;
   bool _hasPermission = false;
   bool _permanentlyDenied = false;
+  DateTime? _lastScanAt;
+  String? _lastValue;
+  String? _statusMessage;
 
   @override
   void initState() {
@@ -68,7 +81,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   }
 
   void _onDetect(BarcodeCapture capture) {
-    if (_found) return;
+    if (_found && widget.closeOnScan) return;
     String? value;
     for (final barcode in capture.barcodes) {
       final raw = barcode.rawValue;
@@ -79,9 +92,26 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
     }
     if (value == null || value.trim().isEmpty) return;
 
-    _found = true;
-    _controller.stop();
-    Navigator.pop(context, value);
+    final now = DateTime.now();
+    final recent = _lastScanAt != null &&
+        now.difference(_lastScanAt!).inMilliseconds < 900;
+    if (recent && value == _lastValue) return;
+
+    _lastScanAt = now;
+    _lastValue = value;
+    ScanSound.play();
+    HapticFeedback.lightImpact();
+
+    if (widget.closeOnScan) {
+      _found = true;
+      _controller.stop();
+      Navigator.pop(context, value);
+    } else {
+      final message = widget.onScan?.call(value);
+      setState(() {
+        _statusMessage = message ?? "Skanerlandi: $value";
+      });
+    }
   }
 
   @override
@@ -94,6 +124,14 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
             icon: const Icon(Icons.flash_on),
             onPressed: _hasPermission ? () => _controller.toggleTorch() : null,
           ),
+          if (widget.showDoneButton)
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                "Tugatish",
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
         ],
       ),
       body: _checkingPermission
@@ -117,7 +155,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          widget.hint,
+                          _statusMessage ?? widget.hint,
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: Colors.white),
                         ),

@@ -111,4 +111,12 @@ class EyeSide {
     }
     return null;
   }
+
+  EyeSide copy() {
+    return EyeSide(
+      readings: readings.map((m) => m.copy()).toList(),
+      avg: avg?.copy(),
+      se: se,
+    );
+  }
 }

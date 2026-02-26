@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -17,22 +20,13 @@ class CustomerReportService {
     required List<EyeScanResult> analyses,
     required List<CarePlanModel> prescriptions,
   }) async {
+    WidgetsFlutterBinding.ensureInitialized();
     final doc = pw.Document(
       compress: true,
       version: PdfVersion.pdf_1_5,
     );
 
-    pw.ThemeData theme;
-    try {
-      final baseFont = await PdfGoogleFonts.notoSansRegular();
-      final boldFont = await PdfGoogleFonts.notoSansBold();
-      theme = pw.ThemeData.withFont(base: baseFont, bold: boldFont);
-    } catch (_) {
-      theme = pw.ThemeData.withFont(
-        base: pw.Font.helvetica(),
-        bold: pw.Font.helveticaBold(),
-      );
-    }
+    final theme = await _buildTheme();
 
     final opticaName = optica?.name.trim().isNotEmpty == true
         ? optica!.name.trim()
@@ -442,7 +436,7 @@ class CustomerReportService {
                       style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
                     ),
                     pw.Text(
-                      "Doza: ${item.dosage} • Muddat: ${item.duration}",
+                      "Doza: ${item.dosage}, Muddat: ${item.duration}",
                       style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
                     ),
                     if (item.instruction.trim().isNotEmpty)
@@ -544,10 +538,93 @@ class CustomerReportService {
     if (text.length <= max) return text;
     return "${text.substring(0, max).trim()}...";
   }
+
+  Future<pw.ThemeData> _buildTheme() async {
+    final assetFonts = await _loadAssetFonts();
+    if (assetFonts != null) {
+      return pw.ThemeData.withFont(
+        base: assetFonts.base,
+        bold: assetFonts.bold,
+      );
+    }
+
+    if (Platform.isMacOS) {
+      final fonts = await _loadMacFonts();
+      return pw.ThemeData.withFont(
+        base: fonts.base,
+        bold: fonts.bold,
+      );
+    }
+
+    try {
+      final base = await PdfGoogleFonts.notoSansRegular();
+      final bold = await PdfGoogleFonts.notoSansBold();
+      return pw.ThemeData.withFont(
+        base: base,
+        bold: bold,
+      );
+    } catch (_) {
+      return pw.ThemeData.withFont(
+        base: pw.Font.helvetica(),
+        bold: pw.Font.helveticaBold(),
+      );
+    }
+  }
+
+  Future<_FontPair?> _loadAssetFonts() async {
+    try {
+      final baseData = await rootBundle.load('assets/fonts/Arial.ttf');
+      final boldData = await rootBundle.load('assets/fonts/Arial_Bold.ttf');
+      final base = pw.Font.ttf(baseData);
+      final bold = pw.Font.ttf(boldData);
+      return _FontPair(base: base, bold: bold);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<_FontPair> _loadMacFonts() async {
+    final base = await _loadFirstFont(const [
+          '/System/Library/Fonts/Supplemental/Arial Unicode.ttf',
+          '/System/Library/Fonts/Supplemental/Arial.ttf',
+          '/System/Library/Fonts/Supplemental/Times New Roman.ttf',
+          '/System/Library/Fonts/Supplemental/Helvetica.ttf',
+          '/System/Library/Fonts/Supplemental/Georgia.ttf',
+        ]) ??
+        pw.Font.helvetica();
+
+    final bold = await _loadFirstFont(const [
+          '/System/Library/Fonts/Supplemental/Arial Bold.ttf',
+          '/System/Library/Fonts/Supplemental/Times New Roman Bold.ttf',
+          '/System/Library/Fonts/Supplemental/Helvetica Bold.ttf',
+          '/System/Library/Fonts/Supplemental/Georgia Bold.ttf',
+        ]) ??
+        base;
+
+    return _FontPair(base: base, bold: bold);
+  }
+
+  Future<pw.Font?> _loadFirstFont(List<String> paths) async {
+    for (final path in paths) {
+      final file = File(path);
+      if (await file.exists()) {
+        final bytes = await file.readAsBytes();
+        if (bytes.isEmpty) continue;
+        return pw.Font.ttf(bytes.buffer.asByteData());
+      }
+    }
+    return null;
+  }
 }
 
 class _SeValues {
   final double? earliest;
   final double? latest;
   const _SeValues({this.earliest, this.latest});
+}
+
+class _FontPair {
+  final pw.Font base;
+  final pw.Font bold;
+  const _FontPair({required this.base, required this.bold});
 }

@@ -5,10 +5,14 @@ import '../../models/eye_side.dart';
 
 class EyeScanCard extends StatelessWidget {
   final EyeScanResult scan;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const EyeScanCard({
     super.key,
     required this.scan,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
@@ -46,6 +50,31 @@ class EyeScanCard extends StatelessWidget {
         if (scan.pd != null) ...[
           const SizedBox(width: 8),
           Text("PD (Qorachiq masofasi) ${scan.pd}", style: const TextStyle(fontSize: 12)),
+        ],
+        if (onEdit != null || onDelete != null) ...[
+          const SizedBox(width: 6),
+          PopupMenuButton<_EyeScanAction>(
+            icon: const Icon(Icons.more_vert, size: 18),
+            onSelected: (value) {
+              if (value == _EyeScanAction.edit) {
+                onEdit?.call();
+              } else if (value == _EyeScanAction.delete) {
+                onDelete?.call();
+              }
+            },
+            itemBuilder: (context) => [
+              if (onEdit != null)
+                const PopupMenuItem(
+                  value: _EyeScanAction.edit,
+                  child: Text("Tahrirlash"),
+                ),
+              if (onDelete != null)
+                const PopupMenuItem(
+                  value: _EyeScanAction.delete,
+                  child: Text("O'chirish"),
+                ),
+            ],
+          ),
         ],
       ],
     );
@@ -120,3 +149,5 @@ const _headerStyle = TextStyle(
   color: Colors.grey,
   fontWeight: FontWeight.w600,
 );
+
+enum _EyeScanAction { edit, delete }

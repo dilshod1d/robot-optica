@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/product_model.dart';
 import '../../services/inventory_service.dart';
+import '../../utils/inventory_categories.dart';
+import '../../utils/barcode_keyboard_listener.dart';
 import '../common/app_loader.dart';
+import '../../screens/inventory/barcode_scanner_screen.dart';
 
 class ProductFormSheet extends StatefulWidget {
   final String opticaId;
@@ -33,17 +36,10 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
 
   bool _saving = false;
   bool _showAdvanced = false;
+  int _barcodeToken = -1;
 
   String _category = 'frame';
 
-  static const Map<String, String> _categories = {
-    'frame': "Ko'zoynak",
-    'lens': 'Linza',
-    'contact_lens': 'Kontakt linza',
-    'accessory': 'Aksesuar',
-    'service': 'Xizmat',
-    'other': 'Boshqa',
-  };
 
   @override
   void initState() {
@@ -57,8 +53,13 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
       _minStockController.text = p.minStock > 0 ? p.minStock.toString() : '';
       _skuController.text = p.sku ?? '';
       _barcodeController.text = p.barcode ?? '';
-      _category = _categories.containsKey(p.category) ? p.category : 'other';
+      _category = inventoryCategories.containsKey(p.category) ? p.category : 'other';
     }
+
+    _barcodeToken = BarcodeKeyboardListener.instance.pushHandler(
+      _handleKeyboardScan,
+      minLength: 4,
+    );
   }
 
   @override
@@ -70,6 +71,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
     _minStockController.dispose();
     _skuController.dispose();
     _barcodeController.dispose();
+    BarcodeKeyboardListener.instance.removeHandler(_barcodeToken);
     super.dispose();
   }
 
@@ -130,6 +132,34 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
     }
   }
 
+  Future<void> _scanBarcode() async {
+    final code = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const BarcodeScannerScreen(
+          title: "Shtrix-kodni skanerlash",
+          hint: "Mahsulot shtrix-kodini skan qiling",
+        ),
+      ),
+    );
+
+    if (code == null || code.trim().isEmpty) return;
+    _setBarcode(code);
+  }
+
+  void _handleKeyboardScan(String code) {
+    _setBarcode(code);
+  }
+
+  void _setBarcode(String code) {
+    final normalized = code.trim();
+    if (normalized.isEmpty) return;
+    _barcodeController.text = normalized;
+    _barcodeController.selection =
+        TextSelection.fromPosition(TextPosition(offset: normalized.length));
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.product != null;
@@ -167,7 +197,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                   labelText: "Kategoriya",
                   border: OutlineInputBorder(),
                 ),
-                items: _categories.entries
+                items: inventoryCategories.entries
                     .map((e) => DropdownMenuItem(
                   value: e.key,
                   child: Text(e.value),
@@ -245,9 +275,14 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: _barcodeController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: "Shtrix-kod (ixtiyoriy)",
                     border: OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.qr_code_scanner),
+                      onPressed: _scanBarcode,
+                      tooltip: "Skanerlash",
+                    ),
                   ),
                 ),
               ],

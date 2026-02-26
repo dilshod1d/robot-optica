@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../models/product_model.dart';
+import '../../screens/inventory/barcode_scanner_screen.dart';
 import '../../services/inventory_service.dart';
+import '../../utils/inventory_categories.dart';
+import '../../utils/barcode_keyboard_listener.dart';
 import '../../widgets/common/app_loader.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/inventory/product_form_sheet.dart';
@@ -16,16 +19,26 @@ class InventoryScreen extends StatefulWidget {
 
 class _InventoryScreenState extends State<InventoryScreen> {
   final _service = InventoryService();
+  final _searchController = TextEditingController();
   String _query = '';
+  List<ProductModel> _productsCache = [];
+  int _barcodeToken = -1;
 
-  static const Map<String, String> _categories = {
-    'frame': "Ko'zoynak",
-    'lens': 'Linza',
-    'contact_lens': 'Kontakt linza',
-    'accessory': 'Aksesuar',
-    'service': 'Xizmat',
-    'other': 'Boshqa',
-  };
+  @override
+  void initState() {
+    super.initState();
+    _barcodeToken = BarcodeKeyboardListener.instance.pushHandler(
+      _handleKeyboardScan,
+      minLength: 4,
+    );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    BarcodeKeyboardListener.instance.removeHandler(_barcodeToken);
+    super.dispose();
+  }
 
   void _openForm({ProductModel? product}) {
     showModalBottomSheet(
@@ -39,6 +52,61 @@ class _InventoryScreenState extends State<InventoryScreen> {
         product: product,
       ),
     );
+  }
+
+  Future<void> _scanBarcode() async {
+    final code = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const BarcodeScannerScreen(),
+      ),
+    );
+
+    if (code == null || code.trim().isEmpty) return;
+    _handleBarcodeInput(code);
+  }
+
+  void _handleKeyboardScan(String code) {
+    _handleBarcodeInput(code, showSnack: true);
+  }
+
+  void _handleBarcodeInput(String code, {bool showSnack = true}) {
+    final normalized = code.trim();
+    if (normalized.isEmpty) return;
+
+    _searchController.text = normalized;
+    _searchController.selection =
+        TextSelection.fromPosition(TextPosition(offset: normalized.length));
+    setState(() => _query = normalized);
+
+    if (_productsCache.isEmpty) {
+      if (showSnack) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Mahsulotlar yuklanmoqda")),
+        );
+      }
+      return;
+    }
+
+    ProductModel? product;
+    for (final p in _productsCache) {
+      if ((p.barcode ?? '').trim() == normalized ||
+          (p.sku ?? '').trim() == normalized) {
+        product = p;
+        break;
+      }
+    }
+
+    if (product == null) {
+      if (showSnack) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Mahsulot topilmadi")),
+        );
+      }
+      return;
+    }
+
+    _openForm(product: product);
   }
 
   List<ProductModel> _filter(List<ProductModel> items) {
@@ -60,11 +128,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
         Padding(
           padding: const EdgeInsets.all(12),
           child: TextField(
-            decoration: const InputDecoration(
+            controller: _searchController,
+            decoration: InputDecoration(
               hintText: "Mahsulot nomi yoki shtrix-kod",
-              prefixIcon: Icon(Icons.search),
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.qr_code_scanner),
+                onPressed: _scanBarcode,
+                tooltip: "Skanerlash",
+              ),
             ),
             onChanged: (v) => setState(() => _query = v),
+            onTapOutside: (_) => FocusScope.of(context).unfocus(),
+            onSubmitted: (_) => FocusScope.of(context).unfocus(),
+            onEditingComplete: () => FocusScope.of(context).unfocus(),
           ),
         ),
         Expanded(
@@ -79,7 +156,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 return const Center(child: Text("Nimadir noto'g'ri ketdi"));
               }
 
-              final list = _filter(snapshot.data ?? []);
+              _productsCache = snapshot.data ?? [];
+              final list = _filter(_productsCache);
 
               if (list.isEmpty) {
                 return EmptyState(
@@ -131,7 +209,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  _categories[product.category] ?? 'Boshqa',
+                                  inventoryCategoryLabel(product.category),
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey,

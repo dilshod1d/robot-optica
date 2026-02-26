@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/billing_model.dart';
 import '../../models/customer_model.dart';
@@ -9,6 +11,8 @@ import '../../models/product_model.dart';
 import '../../models/sale_item.dart';
 import '../../models/sale_model.dart';
 import '../../screens/inventory/barcode_scanner_screen.dart';
+import '../../utils/barcode_keyboard_listener.dart';
+import '../../utils/scan_sound.dart';
 import '../../services/customer_service.dart';
 import '../../services/inventory_service.dart';
 import '../../services/loyalty_card_store.dart';
@@ -40,6 +44,7 @@ class _PosScreenState extends State<PosScreen> {
   CustomerModel? _selectedCustomer;
   List<ProductModel> _productsCache = [];
   LoyaltyConfigModel? _loyaltyConfig;
+  int _barcodeToken = -1;
 
   static const List<String> _paymentMethods = [
     'Naqd',
@@ -53,11 +58,16 @@ class _PosScreenState extends State<PosScreen> {
   void initState() {
     super.initState();
     _loadLoyaltyConfig();
+    _barcodeToken = BarcodeKeyboardListener.instance.pushHandler(
+      _handleKeyboardScan,
+      minLength: 4,
+    );
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    BarcodeKeyboardListener.instance.removeHandler(_barcodeToken);
     super.dispose();
   }
 
@@ -84,21 +94,37 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   Future<void> _scanBarcode() async {
-    final code = await Navigator.push<String>(
+    await Navigator.push<void>(
       context,
       MaterialPageRoute(
-        builder: (_) => const BarcodeScannerScreen(),
+        builder: (_) => _PosScanScreen(
+          cart: _cart,
+          onScan: _handleScan,
+          onCheckout: () {
+            if (_cart.isEmpty) return;
+            Future.microtask(_checkout);
+          },
+        ),
       ),
     );
+  }
 
-    if (code == null || code.trim().isEmpty) return;
-
-    _searchController.text = code;
-    _searchController.selection =
-        TextSelection.fromPosition(TextPosition(offset: code.length));
-    setState(() => _query = code);
-
+  _ScanFeedback? _handleScan(String code) {
     final normalized = code.trim();
+    if (normalized.isEmpty) return null;
+
+    _searchController.text = normalized;
+    _searchController.selection =
+        TextSelection.fromPosition(TextPosition(offset: normalized.length));
+    setState(() => _query = normalized);
+
+    if (_productsCache.isEmpty) {
+      return const _ScanFeedback(
+        message: "Mahsulotlar yuklanmoqda",
+        success: false,
+      );
+    }
+
     ProductModel? product;
     for (final p in _productsCache) {
       if ((p.barcode ?? '').trim() == normalized ||
@@ -109,15 +135,32 @@ class _PosScreenState extends State<PosScreen> {
     }
 
     if (product == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Mahsulot topilmadi")),
+      return const _ScanFeedback(
+        message: "Mahsulot topilmadi",
+        success: false,
       );
-      return;
     }
 
-    _addToCart(product);
+    final added = _addToCartInternal(product);
+    if (added) {
+      setState(() {});
+      return _ScanFeedback(
+        message: "${product.name} savatga qo'shildi",
+        success: true,
+      );
+    }
+    return const _ScanFeedback(
+      message: "Stok yetarli emas",
+      success: false,
+    );
+  }
+
+  void _handleKeyboardScan(String code) {
+    final feedback = _handleScan(code);
+    if (feedback == null || !mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("${product.name} savatga qo'shildi")),
+      SnackBar(content: Text(feedback.message)),
     );
   }
 
@@ -1071,9 +1114,11 @@ class _PosScreenState extends State<PosScreen> {
       },
     );
 
-    noteController.dispose();
-    paidController.dispose();
-    discountController.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      noteController.dispose();
+      paidController.dispose();
+      discountController.dispose();
+    });
   }
 
   Future<CustomerModel?> _pickCustomer() async {
@@ -1266,6 +1311,368 @@ class _CartItem {
     return _CartItem(
       product: product,
       quantity: quantity ?? this.quantity,
+    );
+  }
+}
+
+class _ScanFeedback {
+  final String message;
+  final bool success;
+
+  const _ScanFeedback({required this.message, required this.success});
+}
+
+class _PosScanScreen extends StatefulWidget {
+  final List<_CartItem> cart;
+  final _ScanFeedback? Function(String code) onScan;
+  final VoidCallback? onCheckout;
+
+  const _PosScanScreen({
+    required this.cart,
+    required this.onScan,
+    this.onCheckout,
+  });
+
+  @override
+  State<_PosScanScreen> createState() => _PosScanScreenState();
+}
+
+class _PosScanScreenState extends State<_PosScanScreen> {
+  final MobileScannerController _controller = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+  );
+  bool _checkingPermission = true;
+  bool _hasPermission = false;
+  bool _permanentlyDenied = false;
+  DateTime? _lastScanAt;
+  String? _lastValue;
+  String? _statusMessage;
+  Color _statusColor = Colors.white;
+
+  @override
+  void initState() {
+    super.initState();
+    _ensurePermission();
+  }
+
+  Future<void> _ensurePermission() async {
+    final status = await Permission.camera.status;
+    if (status.isGranted) {
+      if (!mounted) return;
+      setState(() {
+        _hasPermission = true;
+        _checkingPermission = false;
+        _permanentlyDenied = false;
+      });
+      return;
+    }
+
+    if (status.isPermanentlyDenied) {
+      if (!mounted) return;
+      setState(() {
+        _hasPermission = false;
+        _checkingPermission = false;
+        _permanentlyDenied = true;
+      });
+      return;
+    }
+
+    final request = await Permission.camera.request();
+    if (!mounted) return;
+    setState(() {
+      _hasPermission = request.isGranted;
+      _checkingPermission = false;
+      _permanentlyDenied = request.isPermanentlyDenied;
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    String? value;
+    for (final barcode in capture.barcodes) {
+      final raw = barcode.rawValue;
+      if (raw != null && raw.trim().isNotEmpty) {
+        value = raw.trim();
+        break;
+      }
+    }
+    if (value == null || value.trim().isEmpty) return;
+
+    final now = DateTime.now();
+    final recent = _lastScanAt != null &&
+        now.difference(_lastScanAt!).inMilliseconds < 800;
+    if (recent && value == _lastValue) return;
+    _lastScanAt = now;
+    _lastValue = value;
+
+    final feedback = widget.onScan(value);
+    if (feedback == null) return;
+
+    ScanSound.play();
+    if (feedback.success) {
+      HapticFeedback.mediumImpact();
+    } else {
+      HapticFeedback.heavyImpact();
+    }
+
+    setState(() {
+      _statusMessage = feedback.message;
+      _statusColor = feedback.success ? Colors.green : Colors.red;
+    });
+  }
+
+  int get _totalItems =>
+      widget.cart.fold(0, (sum, item) => sum + item.quantity);
+
+  double get _totalAmount =>
+      widget.cart.fold(0.0, (sum, item) => sum + item.total);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("POS skanerlash"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.flash_on),
+            onPressed: _hasPermission ? () => _controller.toggleTorch() : null,
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              "Tugatish",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+      body: _checkingPermission
+          ? const Center(child: AppLoader())
+          : !_hasPermission
+              ? _permissionView()
+              : Stack(
+                  children: [
+                    MobileScanner(
+                      controller: _controller,
+                      onDetect: _onDetect,
+                      errorBuilder: (context, error, child) {
+                        return const Center(
+                          child: Text("Kamerani ishga tushirib bo'lmadi"),
+                        );
+                      },
+                    ),
+                    IgnorePointer(
+                      child: Center(
+                        child: Container(
+                          width: 260,
+                          height: 180,
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.8),
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                      ),
+                    ),
+                    DraggableScrollableSheet(
+                      initialChildSize: 0.28,
+                      minChildSize: 0.18,
+                      maxChildSize: 0.6,
+                      builder: (context, controller) {
+                        return Container(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(20),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 16,
+                                offset: Offset(0, -4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 4,
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade300,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Savat: $_totalItems ta",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          "${_totalAmount.toStringAsFixed(0)} UZS",
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: widget.onCheckout == null
+                                        ? null
+                                        : () {
+                                            Navigator.pop(context);
+                                            widget.onCheckout?.call();
+                                          },
+                                    child: const Text("To'lov"),
+                                  ),
+                                ],
+                              ),
+                              if (_statusMessage != null) ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _statusColor.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    _statusMessage!,
+                                    style: TextStyle(
+                                      color: _statusColor,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 8),
+                              Expanded(
+                                child: widget.cart.isEmpty
+                                    ? const Center(
+                                        child: Text(
+                                          "Savat bo'sh. Skanerlashni boshlang.",
+                                          style: TextStyle(color: Colors.grey),
+                                        ),
+                                      )
+                                    : ListView.separated(
+                                        controller: controller,
+                                        itemCount: widget.cart.length,
+                                        separatorBuilder: (_, __) =>
+                                            const Divider(height: 12),
+                                        itemBuilder: (context, index) {
+                                          final item = widget.cart[index];
+                                          return Row(
+                                            children: [
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      item.product.name,
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      "${item.quantity} x ${item.product.price.toStringAsFixed(0)}",
+                                                      style: const TextStyle(
+                                                        fontSize: 11,
+                                                        color: Colors.grey,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              Text(
+                                                item.total.toStringAsFixed(0),
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+    );
+  }
+
+  Widget _permissionView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.camera_alt_outlined, size: 48, color: Colors.grey),
+            const SizedBox(height: 12),
+            const Text(
+              "Kameraga ruxsat kerak",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              "Shtrix-kodlarni skanerlash uchun kameraga ruxsat bering.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  final permanentlyDenied =
+                      await Permission.camera.isPermanentlyDenied;
+                  if (permanentlyDenied) {
+                    await openAppSettings();
+                    await _ensurePermission();
+                  } else {
+                    setState(() => _checkingPermission = true);
+                    await _ensurePermission();
+                  }
+                },
+                child: Text(
+                  _permanentlyDenied ? "Sozlamalarni ochish" : "Ruxsat berish",
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

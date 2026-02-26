@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:pdf/pdf.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
@@ -329,8 +330,19 @@ class _LoyaltyCardSetupScreenState extends State<LoyaltyCardSetupScreen> {
 
       final pdfName =
           _buildPdfName(allowWithoutCustomer ? null : _selectedCustomer);
+      final info = await Printing.info();
+      if (!info.canPrint) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Printer mavjud emas")),
+          );
+        }
+        return;
+      }
       await Printing.layoutPdf(
         name: pdfName,
+        format: PdfPageFormat(85.6 * PdfPageFormat.mm, 54 * PdfPageFormat.mm),
+        dynamicLayout: !Platform.isMacOS,
         onLayout: (_) async => pdf,
       );
     } finally {

@@ -1,12 +1,14 @@
 import 'eye_side.dart';
 
 class EyeScanResult {
+  String? id;
   String? date;
   String? pd;
   EyeSide right;
   EyeSide left;
 
   EyeScanResult({
+    this.id,
     required this.date,
     required this.pd,
     required this.right,
@@ -32,8 +34,17 @@ class EyeScanResult {
       ),
     );
   }
-}
 
+  EyeScanResult copy() {
+    return EyeScanResult(
+      id: id,
+      date: date,
+      pd: pd,
+      right: right.copy(),
+      left: left.copy(),
+    );
+  }
+}
 
 
 

@@ -142,6 +142,20 @@ Return JSON only.
     await _analysisRef(opticaId).doc(analysisId).delete();
   }
 
+  Future<void> updateAnalysis({
+    required String opticaId,
+    required String analysisId,
+    required EyeScanResult scan,
+  }) async {
+    await _analysisRef(opticaId).doc(analysisId).update({
+      'date': scan.date,
+      'pd': scan.pd,
+      'right': _sideToMap(scan.right),
+      'left': _sideToMap(scan.left),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   // ================== COUNTS ==================
 
   Future<int?> getCustomerAnalysisCount({
@@ -162,6 +176,7 @@ Return JSON only.
     final data = doc.data();
 
     return EyeScanResult(
+      id: doc.id,
       date: data['date'],
       pd: data['pd'],
       right: _sideFromMap(data['right']),

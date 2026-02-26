@@ -26,4 +26,12 @@ class EyeMeasurement {
       axis: readAny(['axis', 'ax', 'a']),
     );
   }
+
+  EyeMeasurement copy() {
+    return EyeMeasurement(
+      sphere: sphere,
+      cylinder: cylinder,
+      axis: axis,
+    );
+  }
 }

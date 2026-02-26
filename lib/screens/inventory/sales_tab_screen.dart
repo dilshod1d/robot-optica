@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'inventory_screen.dart';
 import 'pos_screen.dart';
 import 'sales_history_screen.dart';
+import 'sales_analytics_screen.dart';
 
 class SalesTabScreen extends StatelessWidget {
   final String opticaId;
@@ -11,7 +12,7 @@ class SalesTabScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Column(
         children: [
           Container(
@@ -22,6 +23,7 @@ class SalesTabScreen extends StatelessWidget {
                 Tab(text: "Inventar"),
                 Tab(text: "POS"),
                 Tab(text: "Tarix"),
+                Tab(text: "Analitika"),
               ],
             ),
           ),
@@ -31,6 +33,7 @@ class SalesTabScreen extends StatelessWidget {
                 InventoryScreen(opticaId: opticaId),
                 PosScreen(opticaId: opticaId),
                 SalesHistoryScreen(opticaId: opticaId),
+                SalesAnalyticsScreen(opticaId: opticaId),
               ],
             ),
           ),

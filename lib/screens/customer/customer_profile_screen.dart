@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:robot_optica/screens/customer/customer_sms_log_screen.dart';
@@ -7,11 +8,13 @@ import 'package:robot_optica/widgets/analyses/patient_eye_analyses_widget.dart';
 import 'package:robot_optica/widgets/billing/billing_sheet_widget.dart';
 import 'package:robot_optica/widgets/prescription/add_prescription_sheet.dart';
 import 'package:robot_optica/widgets/visits/add_visit_sheet.dart';
+import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/customer_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/customer_report_service.dart';
+import '../../services/customer_service.dart';
 import '../../services/eye_scan_service.dart';
 import '../../services/optica_service.dart';
 import '../../services/prescription_service.dart';
@@ -44,6 +47,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   final EyeScanService _analysisService = EyeScanService();
   final PrescriptionService _prescriptionService = PrescriptionService();
   final CustomerReportService _reportService = CustomerReportService();
+  final CustomerService _customerService = CustomerService();
 
   late CustomerModel customer;
 
@@ -117,6 +121,59 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     );
   }
 
+  Future<void> _deleteCustomer() async {
+    final opticaId = context.read<AuthProvider>().opticaId;
+    if (opticaId == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Mijozni o'chirish"),
+        content: const Text(
+          "Bu mijozni butunlay o'chirasiz. Bu amalni ortga qaytarib bo'lmaydi.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Bekor qilish"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("O'chirish"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+    if (!mounted) return;
+
+    _showDeletingDialog();
+
+    try {
+      await _customerService.deleteCustomerCascade(
+        opticaId: opticaId,
+        customerId: customer.id,
+      );
+      if (!mounted) return;
+      Navigator.pop(context); // close loading
+      Navigator.pop(context); // back
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Mijoz o'chirildi")),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Mijozni o'chirishda xatolik")),
+      );
+    }
+  }
+
   Future<void> _exportCustomerReport() async {
     final action = await _showReportActions();
     if (action == null) return;
@@ -147,8 +204,18 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
       Navigator.pop(context);
 
       if (action == _ReportAction.print) {
+        final info = await Printing.info();
+        if (!info.canPrint) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Printer mavjud emas")),
+          );
+          return;
+        }
         await Printing.layoutPdf(
           name: name,
+          format: PdfPageFormat.a4,
+          dynamicLayout: !Platform.isMacOS,
           onLayout: (_) async => pdf,
         );
       } else {
@@ -211,6 +278,31 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                 ),
                 SizedBox(width: 12),
                 Expanded(child: Text("PDF tayyorlanmoqda...")),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDeletingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) {
+        return const Dialog(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 12),
+                Expanded(child: Text("Mijoz o'chirilmoqda...")),
               ],
             ),
           ),
@@ -325,6 +417,19 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             icon: const Icon(Icons.picture_as_pdf, color: Colors.black),
             tooltip: "PDF",
           ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'delete') {
+                _deleteCustomer();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'delete',
+                child: Text("Mijozni o'chirish"),
+              ),
+            ],
+          ),
         ],
       ),
       body: Padding(
@@ -365,4 +470,3 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     );
   }
 }
-

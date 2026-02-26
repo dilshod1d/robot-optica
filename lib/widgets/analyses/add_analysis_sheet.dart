@@ -12,7 +12,14 @@ class AddAnalysisSheet extends StatefulWidget {
   final String customerId;
   final String? visitId;
   final String opticaId;
-  const AddAnalysisSheet({super.key, required this.customerId, this.visitId, required this.opticaId});
+  final EyeScanResult? existingScan;
+  const AddAnalysisSheet({
+    super.key,
+    required this.customerId,
+    this.visitId,
+    required this.opticaId,
+    this.existingScan,
+  });
 
   @override
   State<AddAnalysisSheet> createState() => _AddAnalysisSheetState();
@@ -23,9 +30,19 @@ class _AddAnalysisSheetState extends State<AddAnalysisSheet> {
 
   bool _loading = false;
   bool _saved = false;
+  late final bool _isEditing;
 
   EyeScanResult? _report;
   Uint8List? _imageBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _isEditing = widget.existingScan != null;
+    if (_isEditing) {
+      _report = widget.existingScan?.copy();
+    }
+  }
 
   Future<void> _scan(BuildContext context) async {
     final picker = ImagePicker();
@@ -131,13 +148,21 @@ class _AddAnalysisSheetState extends State<AddAnalysisSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _header("Analizni ko'rish"),
+          _header(_isEditing ? "Analizni tahrirlash" : "Analizni ko'rish"),
           const SizedBox(height: 16),
 
 
           _infoCard("Skanerlash ma'lumotlari", [
-            _editableRow("Sana", _report!.date ?? ""),
-            _editableRow("Qorachiq masofasi", _report!.pd ?? ""),
+            _editableRow(
+              "Sana",
+              _report!.date ?? "",
+              onSave: (v) => _report!.date = v,
+            ),
+            _editableRow(
+              "Qorachiq masofasi",
+              _report!.pd ?? "",
+              onSave: (v) => _report!.pd = v,
+            ),
           ]),
 
           const SizedBox(height: 16),
@@ -155,6 +180,10 @@ class _AddAnalysisSheetState extends State<AddAnalysisSheet> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () {
+                    if (_isEditing) {
+                      Navigator.pop(context);
+                      return;
+                    }
                     setState(() {
                       _report = null;
                       _imageBytes = null;
@@ -167,7 +196,7 @@ class _AddAnalysisSheetState extends State<AddAnalysisSheet> {
               Expanded(
                 child: ElevatedButton(
                   onPressed: _save,
-                  child: const Text("Analizni saqlash"),
+                  child: Text(_isEditing ? "Saqlash" : "Analizni saqlash"),
                 ),
               ),
             ],
@@ -259,7 +288,11 @@ class _AddAnalysisSheetState extends State<AddAnalysisSheet> {
           ],
 
           const SizedBox(height: 12),
-          _editableRow("Sferik ko‘rsatkich", side.se ?? ""),
+          _editableRow(
+            "Sferik ko‘rsatkich",
+            side.se ?? "",
+            onSave: (v) => side.se = v,
+          ),
         ]),
       ),
     );
@@ -294,12 +327,12 @@ class _AddAnalysisSheetState extends State<AddAnalysisSheet> {
     );
   }
 
-  Widget _editableRow(String label, String value) {
+  Widget _editableRow(String label, String value, {required Function(String) onSave}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(children: [
         Expanded(child: Text(label)),
-        _inlineEditCell(value, (v) {}, const TextStyle(fontWeight: FontWeight.w600)),
+        _inlineEditCell(value, onSave, const TextStyle(fontWeight: FontWeight.w600)),
       ]),
     );
   }
@@ -360,12 +393,24 @@ class _AddAnalysisSheetState extends State<AddAnalysisSheet> {
     try {
       setState(() => _loading = true);
 
-      await _service.saveAnalysis(
-        opticaId: widget.opticaId,
-        customerId: widget.customerId,
-        visitId: widget.visitId,
-        scan: _report!,
-      );
+      if (_isEditing) {
+        final analysisId = widget.existingScan?.id;
+        if (analysisId == null) {
+          throw Exception("Analiz ID topilmadi");
+        }
+        await _service.updateAnalysis(
+          opticaId: widget.opticaId,
+          analysisId: analysisId,
+          scan: _report!,
+        );
+      } else {
+        await _service.saveAnalysis(
+          opticaId: widget.opticaId,
+          customerId: widget.customerId,
+          visitId: widget.visitId,
+          scan: _report!,
+        );
+      }
 
       setState(() {
         _saved = true;
