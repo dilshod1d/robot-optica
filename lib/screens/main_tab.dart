@@ -12,6 +12,7 @@ import '../services/billing_service.dart';
 import '../services/customer_service.dart';
 import '../services/visit_service.dart';
 import '../widgets/today_summary_card.dart';
+import '../widgets/common/responsive_frame.dart';
 
 class MainTab extends StatelessWidget {
   const MainTab({super.key});
@@ -28,20 +29,16 @@ class MainTab extends StatelessWidget {
       return const AppLoader();
     }
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
+    return ResponsiveFrame(
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
         const SizedBox(height: 24),
 
-        GridView(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.4,
-          ),
+        ResponsiveGrid(
+          minItemWidth: 220,
+          maxCrossAxisCount: 4,
+          childAspectRatio: 1.4,
           children: [
             // TOTAL SALES
             StreamBuilder<double>(
@@ -193,6 +190,7 @@ class MainTab extends StatelessWidget {
 
         const SizedBox(height: 24),
       ],
+    ),
     );
   }
 

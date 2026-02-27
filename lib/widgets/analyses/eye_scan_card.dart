@@ -17,24 +17,41 @@ class EyeScanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: _shadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _header(),
-          const SizedBox(height: 12),
-          _eyeTable("O'ng", scan.right),
-          const SizedBox(height: 12),
-          _eyeTable("Chap", scan.left),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 600;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: _shadow,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _header(),
+              const SizedBox(height: 12),
+              if (isWide)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _eyeTable("O'ng", scan.right)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _eyeTable("Chap", scan.left)),
+                  ],
+                )
+              else ...[
+                _eyeTable("O'ng", scan.right),
+                const SizedBox(height: 12),
+                _eyeTable("Chap", scan.left),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 

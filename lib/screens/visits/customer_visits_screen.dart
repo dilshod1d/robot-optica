@@ -25,6 +25,14 @@ class CustomerVisitsScreen extends StatefulWidget {
 }
 
 class _CustomerVisitsScreenState extends State<CustomerVisitsScreen> {
+  int _columnsForWidth(double width) {
+    const minWidth = 360.0;
+    const maxColumns = 4;
+    if (width <= 0) return 1;
+    final count = (width / minWidth).floor();
+    return count.clamp(1, maxColumns);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -48,21 +56,31 @@ class _CustomerVisitsScreenState extends State<CustomerVisitsScreen> {
       return const EmptyState();
     }
 
-    return SingleChildScrollView(
-      child: ListView.builder(
-        // padding: const EdgeInsets.all(16),
-        itemCount: provider.visits.length,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemBuilder: (_, i) {
-          final visit = provider.visits[i];
-      
-          return VisitCard(
-            visit: visit,
-            onMore: () => _showActions(context, visit),
-          );
-        },
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = _columnsForWidth(constraints.maxWidth);
+        const spacing = 12.0;
+        final itemWidth =
+            (constraints.maxWidth - (spacing * (columns - 1))) / columns;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: provider.visits.map((visit) {
+              return SizedBox(
+                width: itemWidth,
+                child: VisitCard(
+                  visit: visit,
+                  margin: EdgeInsets.zero,
+                  onMore: () => _showActions(context, visit),
+                ),
+              );
+            }).toList(),
+          ),
+        );
+      },
     );
 
   }

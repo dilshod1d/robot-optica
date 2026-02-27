@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:robot_optica/widgets/common/ai_analyze_loader.dart';
+import 'package:robot_optica/widgets/common/responsive_frame.dart';
 import '../../models/eye_measurement.dart';
 import '../../models/eye_scan_result.dart';
 import '../../models/eye_side.dart';
@@ -101,22 +102,14 @@ class _AddAnalysisSheetState extends State<AddAnalysisSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).viewPadding.bottom + 20,
-        ),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: _saved
-              ? _successView()
-              : _report == null
-              ? _scanView()
-              : _reviewView(),
-        ),
+    return SheetFrame(
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: _saved
+            ? _successView()
+            : _report == null
+            ? _scanView()
+            : _reviewView(),
       ),
     );
   }
@@ -143,67 +136,65 @@ class _AddAnalysisSheetState extends State<AddAnalysisSheet> {
   }
 
   Widget _reviewView() {
-    return SingleChildScrollView(
+    return Column(
       key: const ValueKey("review"),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _header(_isEditing ? "Analizni tahrirlash" : "Analizni ko'rish"),
-          const SizedBox(height: 16),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _header(_isEditing ? "Analizni tahrirlash" : "Analizni ko'rish"),
+        const SizedBox(height: 16),
 
 
-          _infoCard("Skanerlash ma'lumotlari", [
-            _editableRow(
-              "Sana",
-              _report!.date ?? "",
-              onSave: (v) => _report!.date = v,
-            ),
-            _editableRow(
-              "Qorachiq masofasi",
-              _report!.pd ?? "",
-              onSave: (v) => _report!.pd = v,
-            ),
-          ]),
-
-          const SizedBox(height: 16),
-
-          _eyeCard("O'ng ko'z", _report!.right),
-          const SizedBox(height: 16),
-          _eyeCard("Chap ko'z", _report!.left),
-
-          const SizedBox(height: 24),
-
-          const SizedBox(height: 24),
-
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {
-                    if (_isEditing) {
-                      Navigator.pop(context);
-                      return;
-                    }
-                    setState(() {
-                      _report = null;
-                      _imageBytes = null;
-                    });
-                  },
-                  child: const Text("Bekor qilish"),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _save,
-                  child: Text(_isEditing ? "Saqlash" : "Analizni saqlash"),
-                ),
-              ),
-            ],
+        _infoCard("Skanerlash ma'lumotlari", [
+          _editableRow(
+            "Sana",
+            _report!.date ?? "",
+            onSave: (v) => _report!.date = v,
           ),
+          _editableRow(
+            "Qorachiq masofasi",
+            _report!.pd ?? "",
+            onSave: (v) => _report!.pd = v,
+          ),
+        ]),
 
-        ],
-      ),
+        const SizedBox(height: 16),
+
+        _eyeCard("O'ng ko'z", _report!.right),
+        const SizedBox(height: 16),
+        _eyeCard("Chap ko'z", _report!.left),
+
+        const SizedBox(height: 24),
+
+        const SizedBox(height: 24),
+
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () {
+                  if (_isEditing) {
+                    Navigator.pop(context);
+                    return;
+                  }
+                  setState(() {
+                    _report = null;
+                    _imageBytes = null;
+                  });
+                },
+                child: const Text("Bekor qilish"),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _save,
+                child: Text(_isEditing ? "Saqlash" : "Analizni saqlash"),
+              ),
+            ),
+          ],
+        ),
+
+      ],
     );
   }
 
@@ -360,13 +351,8 @@ class _AddAnalysisSheetState extends State<AddAnalysisSheet> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 16,
-            bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).viewPadding.bottom + 20,
-          ),
+        return SheetFrame(
+          maxWidth: 420,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

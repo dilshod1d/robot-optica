@@ -6,6 +6,7 @@ import '../../providers/visit_provider.dart';
 import '../../widgets/common/app_loader.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/stat_card.dart';
+import '../../widgets/common/responsive_frame.dart';
 import '../../widgets/visits/visit_action_sheet.dart';
 import '../../widgets/visits/visit_card.dart';
 import '../../widgets/visits/reschedule_visit_sheet.dart';
@@ -21,6 +22,13 @@ class VisitsDashboardScreen extends StatefulWidget {
 }
 
 class _VisitsDashboardScreenState extends State<VisitsDashboardScreen> {
+  int _columnsForWidth(double width) {
+    const minWidth = 360.0;
+    const maxColumns = 4;
+    if (width <= 0) return 1;
+    final count = (width / minWidth).floor();
+    return count.clamp(1, maxColumns);
+  }
   @override
   void initState() {
     super.initState();
@@ -44,9 +52,10 @@ class _VisitsDashboardScreenState extends State<VisitsDashboardScreen> {
         await provider.fetchAllVisits(widget.opticaId);
         await provider.fetchVisitStats(widget.opticaId);
       },
-      child: ListView(
-        children: [
-          _Stats(provider),
+      child: ResponsiveFrame(
+        child: ListView(
+          children: [
+            _Stats(provider),
 
           const SizedBox(height: 8),
 
@@ -87,14 +96,52 @@ class _VisitsDashboardScreenState extends State<VisitsDashboardScreen> {
               ),
             )
           else
-            ...provider.recentVisits.map((v) => VisitCard(
-                  visit: v,
-                  showCustomerName: true,
-                  onMore: () => _showActions(context, v),
-                )),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final availableWidth =
+                    constraints.maxWidth - (16 * 2);
+                final columns = _columnsForWidth(availableWidth);
+                const spacing = 12.0;
+                if (columns <= 1) {
+                  return Column(
+                    children: provider.recentVisits.map((v) {
+                      return VisitCard(
+                        visit: v,
+                        showCustomerName: true,
+                        onMore: () => _showActions(context, v),
+                      );
+                    }).toList(),
+                  );
+                }
 
-          const SizedBox(height: 24),
-        ],
+                final itemWidth =
+                    (availableWidth - (spacing * (columns - 1))) /
+                        columns;
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Wrap(
+                    spacing: spacing,
+                    runSpacing: spacing,
+                    children: provider.recentVisits.map((v) {
+                      return SizedBox(
+                        width: itemWidth,
+                        child: VisitCard(
+                          visit: v,
+                          showCustomerName: true,
+                          margin: EdgeInsets.zero,
+                          onMore: () => _showActions(context, v),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
@@ -174,15 +221,10 @@ class _Stats extends StatelessWidget {
       child: Column(
         children: [
           // ===== STATUS STATS =====
-          GridView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.8,
-            ),
+          ResponsiveGrid(
+            minItemWidth: 200,
+            maxCrossAxisCount: 4,
+            childAspectRatio: 1.8,
             children: [
               StatCard(
                 title: "Kutilmoqda",
@@ -210,15 +252,10 @@ class _Stats extends StatelessWidget {
           const SizedBox(height: 12),
 
           // ===== TIME STATS =====
-          GridView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 2.2,
-            ),
+          ResponsiveGrid(
+            minItemWidth: 200,
+            maxCrossAxisCount: 4,
+            childAspectRatio: 2.2,
             children: [
               StatCard(
                 title: "Bugun",

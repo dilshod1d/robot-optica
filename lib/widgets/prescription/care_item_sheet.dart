@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:robot_optica/widgets/common/app_loader.dart';
+import 'package:robot_optica/widgets/common/responsive_frame.dart';
 import '../../models/care_item.dart';
 import '../../services/prescription_service.dart';
 
@@ -23,13 +24,7 @@ class _CreateCareItemSheetState extends State<CreateCareItemSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).viewPadding.bottom + 20,
-      ),
+    return SheetFrame(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -9,6 +9,7 @@ import '../services/optica_service.dart';
 import '../services/sms_scheduler_service.dart';
 import '../utils/device_info_utils.dart';
 import '../widgets/common/app_loader.dart';
+import '../widgets/common/responsive_frame.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -506,9 +507,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Sozlamalar')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        children: [
+      body: ResponsiveFrame(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          children: [
           // ---------------- ACCOUNT ----------------
           const Text('Hisob',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -866,6 +868,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 16),
         ],
+        ),
       ),
     );
   }

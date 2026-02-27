@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:robot_optica/widgets/common/responsive_frame.dart';
 
 import '../../optica_theme.dart';
 
@@ -16,22 +17,26 @@ class VisitActionSheet {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _ActionItem("Tugallangan deb belgilash", Icons.check_circle, OpticaColors.visited, onVisited),
-              // _ActionItem("Mark Late Visited", Icons.access_time, OpticaColors.late, onLateVisited),
-              _ActionItem("Tashrif sanasini ko‘chirish", Icons.event, OpticaColors.primary, onReschedule),
-              _ActionItem("O'tkazib yuborilgan deb belgilash", Icons.cancel, OpticaColors.missed, onNotVisited),
-              const Divider(),
-              _ActionItem("Tashrifni o'chirib yuborish", Icons.delete, Colors.red, onDelete),
-            ],
+        return SheetFrame(
+          maxWidth: 420,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _ActionItem("Tugallangan deb belgilash", Icons.check_circle, OpticaColors.visited, onVisited),
+                // _ActionItem("Mark Late Visited", Icons.access_time, OpticaColors.late, onLateVisited),
+                _ActionItem("Tashrif sanasini ko‘chirish", Icons.event, OpticaColors.primary, onReschedule),
+                _ActionItem("O'tkazib yuborilgan deb belgilash", Icons.cancel, OpticaColors.missed, onNotVisited),
+                const Divider(),
+                _ActionItem("Tashrifni o'chirib yuborish", Icons.delete, Colors.red, onDelete),
+              ],
+            ),
           ),
         );
       },

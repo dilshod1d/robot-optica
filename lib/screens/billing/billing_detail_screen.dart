@@ -5,6 +5,7 @@ import '../../widgets/billing/billing_status_chip.dart';
 import '../../widgets/billing/pay_bottom_sheet.dart';
 import '../../widgets/billing/payment_tile.dart';
 import '../../widgets/common/app_loader.dart';
+import '../../widgets/common/responsive_frame.dart';
 
 class BillingDetailScreen extends StatelessWidget {
   final String opticaId;
@@ -22,12 +23,17 @@ class BillingDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Hisob-kitob tafsilotlari")),
-      body: Column(
-        children: [
-          _header(context),
-          const Divider(),
-          Expanded(child: _payments()),
-        ],
+      body: ResponsiveFrame(
+        maxWidth: 900,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        applyPaddingWhenNarrow: true,
+        child: Column(
+          children: [
+            _header(context),
+            const Divider(),
+            Expanded(child: _payments()),
+          ],
+        ),
       ),
       floatingActionButton: billing.remaining > 0
           ? FloatingActionButton.extended(

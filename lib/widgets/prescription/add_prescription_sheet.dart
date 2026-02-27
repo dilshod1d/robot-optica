@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:robot_optica/widgets/common/app_loader.dart';
+import 'package:robot_optica/widgets/common/responsive_frame.dart';
 import '../../models/care_item.dart';
 import '../../models/care_plan_model.dart';
 import '../../models/customer_model.dart';
@@ -35,13 +36,7 @@ class _AddCarePlanSheetState extends State<AddCarePlanSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).viewPadding.bottom + 20,
-      ),
+    return SheetFrame(
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         child: _saved ? _successView() : _formView(),
@@ -54,46 +49,44 @@ class _AddCarePlanSheetState extends State<AddCarePlanSheet> {
   // --------------------------------------------------
 
   Widget _formView() {
-    return SingleChildScrollView(
+    return Column(
       key: const ValueKey("form"),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _header("Yangi retsept"),
-          const SizedBox(height: 20),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _header("Yangi retsept"),
+        const SizedBox(height: 20),
 
-          _addItemButton(),
-          const SizedBox(height: 12),
+        _addItemButton(),
+        const SizedBox(height: 12),
 
-          ...selectedItems.map(_itemCard),
+        ...selectedItems.map(_itemCard),
 
-          const SizedBox(height: 12),
+        const SizedBox(height: 12),
 
-          _input("Umumiy tavsiya (ixtiyoriy)", generalAdviceController),
+        _input("Umumiy tavsiya (ixtiyoriy)", generalAdviceController),
 
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Checkbox(
-                value: _sendSms,
-                onChanged: (v) {
-                  setState(() => _sendSms = v ?? true);
-                },
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            Checkbox(
+              value: _sendSms,
+              onChanged: (v) {
+                setState(() => _sendSms = v ?? true);
+              },
+            ),
+            const SizedBox(width: 6),
+            const Expanded(
+              child: Text(
+                "Retsept bo‘yicha SMS eslatma yuborish",
+                style: TextStyle(fontSize: 14),
               ),
-              const SizedBox(width: 6),
-              const Expanded(
-                child: Text(
-                  "Retsept bo‘yicha SMS eslatma yuborish",
-                  style: TextStyle(fontSize: 14),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
 
-          _saveButton(),
-        ],
-      ),
+        _saveButton(),
+      ],
     );
   }
 

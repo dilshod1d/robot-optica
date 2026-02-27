@@ -8,6 +8,7 @@ import '../../widgets/visits/visit_action_sheet.dart';
 import '../../widgets/visits/visit_card.dart';
 import '../../widgets/visits/visit_filter_bar.dart';
 import '../../widgets/visits/reschedule_visit_sheet.dart';
+import '../../widgets/common/responsive_frame.dart';
 
 
 class AllVisitsScreen extends StatefulWidget {
@@ -41,6 +42,14 @@ class _AllVisitsScreenState extends State<AllVisitsScreen> {
   };
 
   final filters = [ 'all', 'pending', 'visited', 'lateVisited', 'notVisited', 'today', 'week', 'month', ];
+
+  int _columnsForWidth(double width) {
+    const minWidth = 360.0;
+    const maxColumns = 4;
+    if (width <= 0) return 1;
+    final count = (width / minWidth).floor();
+    return count.clamp(1, maxColumns);
+  }
 
 
 
@@ -82,51 +91,79 @@ class _AllVisitsScreenState extends State<AllVisitsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(title)),
-      body: Column(
-        children: [
-          SizedBox(height: 16,),
-          VisitFilterBar(
-            selected: _selectedFilter,
-            filters: filters,
-            labels: filterLabels,
-            onChanged: (f) {
-              setState(() => _selectedFilter = f);
-              _fetch();
-            },
-          ),
+      body: ResponsiveFrame(
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+            VisitFilterBar(
+              selected: _selectedFilter,
+              filters: filters,
+              labels: filterLabels,
+              onChanged: (f) {
+                setState(() => _selectedFilter = f);
+                _fetch();
+              },
+            ),
 
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async => _fetch(),
-              child: provider.visits.isEmpty && !provider.isLoading
-                  ? const EmptyState()
-                  : ListView.builder(
-                controller: _scrollController,
-                itemCount: provider.visits.length +
-                    (provider.hasMore ? 1 : 0),
-                itemBuilder: (_, i) {
-                  if (i >= provider.visits.length) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: AppLoader(
-                        size: 80,
-                        fill: false,
-                      ),
-                    );
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  if (provider.visits.isEmpty && provider.isLoading) {
+                    return const AppLoader();
                   }
 
-                  final visit = provider.visits[i];
+                  if (provider.visits.isEmpty && !provider.isLoading) {
+                    return const EmptyState();
+                  }
 
-                  return VisitCard(
-                    visit: visit,
-                    onMore: () => _showActions(context, visit),
-                    showCustomerName: true,
+                  final availableWidth =
+                      constraints.maxWidth - (12 * 2);
+                  final columns = _columnsForWidth(availableWidth);
+                  const spacing = 12.0;
+                  final itemWidth =
+                      (availableWidth - (spacing * (columns - 1))) /
+                          columns;
+
+                  return SingleChildScrollView(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      children: [
+                        Wrap(
+                          spacing: spacing,
+                          runSpacing: spacing,
+                          children: provider.visits.map((visit) {
+                            return SizedBox(
+                              width: itemWidth,
+                              child: VisitCard(
+                                visit: visit,
+                                onMore: () => _showActions(context, visit),
+                                showCustomerName: true,
+                                margin: columns <= 1 ? const EdgeInsets.symmetric(horizontal: 2, vertical: 8) : EdgeInsets.zero,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        if (provider.hasMore)
+                          const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: AppLoader(
+                              size: 80,
+                              fill: false,
+                            ),
+                          ),
+                      ],
+                    ),
                   );
                 },
               ),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -104,12 +104,10 @@ class PatientEyeAnalysesWidget extends StatelessWidget {
                 return const Center(child: EmptyState());
               }
 
-              return ListView(
-                padding: const EdgeInsets.only(bottom: 12),
-                children: [
-                  ImprovementSummary(scans: scans),
-                  const SizedBox(height: 12),
-                  ...scans.map((scan) {
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth >= 1000;
+                  final cards = scans.map((scan) {
                     return Dismissible(
                       key: ValueKey(scan.id ?? scan.hashCode),
                       direction: DismissDirection.endToStart,
@@ -129,13 +127,71 @@ class PatientEyeAnalysesWidget extends StatelessWidget {
                         onDelete: () => confirmDelete(scan),
                       ),
                     );
-                  }).toList(),
-                ],
+                  }).toList();
+
+                  if (!isWide) {
+                    return ListView(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      children: [
+                        ImprovementSummary(scans: scans),
+                        const SizedBox(height: 12),
+                        LayoutBuilder(
+                          builder: (context, inner) {
+                            return _buildFlow(cards, inner.maxWidth);
+                          },
+                        ),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 340,
+                        child: ImprovementSummary(scans: scans),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, inner) {
+                            return ListView(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              children: [
+                                _buildFlow(cards, inner.maxWidth),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
               );
             },
           ),
         ),
       ],
+    );
+  }
+
+  int _columnsForWidth(double width) {
+    if (width >= 1200) return 3;
+    if (width >= 700) return 2;
+    return 1;
+  }
+
+  Widget _buildFlow(List<Widget> cards, double maxWidth) {
+    final columns = _columnsForWidth(maxWidth);
+    const spacing = 12.0;
+    final itemWidth = (maxWidth - (spacing * (columns - 1))) / columns;
+
+    return Wrap(
+      spacing: spacing,
+      runSpacing: spacing,
+      children: cards
+          .map((card) => SizedBox(width: itemWidth, child: card))
+          .toList(),
     );
   }
 }

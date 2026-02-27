@@ -6,6 +6,7 @@ import '../../services/inventory_service.dart';
 import '../../utils/inventory_categories.dart';
 import '../../utils/barcode_keyboard_listener.dart';
 import '../common/app_loader.dart';
+import '../common/responsive_frame.dart';
 import '../../screens/inventory/barcode_scanner_screen.dart';
 
 class ProductFormSheet extends StatefulWidget {
@@ -164,23 +165,16 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
   Widget build(BuildContext context) {
     final isEdit = widget.product != null;
 
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).viewPadding.bottom + 20,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isEdit ? "Mahsulotni tahrirlash" : "Mahsulot qo'shish",
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
+    return SheetFrame(
+      maxWidth: 640,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            isEdit ? "Mahsulotni tahrirlash" : "Mahsulot qo'shish",
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
 
               TextField(
                 controller: _nameController,
@@ -289,18 +283,16 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
 
               const SizedBox(height: 20),
 
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _saving ? null : _save,
-                  child: _saving
-                      ? const AppLoader(size: 20, fill: false)
-                      : const Text("Saqlash"),
-                ),
-              ),
-            ],
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _saving ? null : _save,
+              child: _saving
+                  ? const AppLoader(size: 20, fill: false)
+                  : const Text("Saqlash"),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

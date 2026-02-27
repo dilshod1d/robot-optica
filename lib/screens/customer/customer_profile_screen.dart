@@ -21,6 +21,7 @@ import '../../services/prescription_service.dart';
 import '../../widgets/billing/customer_billing_widget.dart';
 import '../../widgets/customer/customer_app_bar.dart';
 import '../../widgets/customer/customer_tabs.dart';
+import '../../widgets/common/responsive_frame.dart';
 import '../../widgets/prescription/customer_prescriptions_widget.dart';
 import 'customer_overview_tab.dart';
 
@@ -406,6 +407,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final opticaId = context.watch<AuthProvider>().opticaId;
+    final width = MediaQuery.of(context).size.width;
+    final isDesktop = width >= 1024;
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
       appBar: CustomerAppBar(
@@ -432,25 +435,48 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CustomerTabs(
-              activeIndex: selectedTabIndex,
-              onChanged: (index) {
-                setState(() {
-                  selectedTabIndex = index;
-                });
-              },
-            ),
-            const SizedBox(height: 20),
+      body: ResponsiveFrame(
+        maxWidth: 1200,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: isDesktop
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CustomerTabs(
+                      activeIndex: selectedTabIndex,
+                      isVertical: true,
+                      width: 220,
+                      onChanged: (index) {
+                        setState(() {
+                          selectedTabIndex = index;
+                        });
+                      },
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildTabContent(opticaId!),
+                    ),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CustomerTabs(
+                      activeIndex: selectedTabIndex,
+                      onChanged: (index) {
+                        setState(() {
+                          selectedTabIndex = index;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 20),
 
-            Expanded(
-              child: _buildTabContent(opticaId!),
-            ),
-          ],
+                    Expanded(
+                      child: _buildTabContent(opticaId!),
+                    ),
+                  ],
+                ),
         ),
       ),
       floatingActionButton: AnimatedSwitcher(

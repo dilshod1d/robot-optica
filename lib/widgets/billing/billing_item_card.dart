@@ -8,6 +8,7 @@ class BillingItemCard extends StatelessWidget {
   final VoidCallback? onPay;
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
+  final EdgeInsetsGeometry margin;
 
   const BillingItemCard({
     super.key,
@@ -16,6 +17,7 @@ class BillingItemCard extends StatelessWidget {
     this.onPay,
     this.onTap,
     this.onEdit,
+    this.margin = const EdgeInsets.only(bottom: 8),
   });
 
   @override
@@ -27,6 +29,7 @@ class BillingItemCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
+        margin: margin,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,

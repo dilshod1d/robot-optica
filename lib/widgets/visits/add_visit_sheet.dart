@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:robot_optica/widgets/common/responsive_frame.dart';
 import '../../models/customer_model.dart';
 import '../../models/visit_model.dart';
 import '../../providers/auth_provider.dart';
@@ -34,13 +35,7 @@ class _AddVisitSheetState extends State<AddVisitSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).viewPadding.bottom + 20,
-      ),
+    return SheetFrame(
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         child: _saved ? _successView() : _formView(),
@@ -49,25 +44,23 @@ class _AddVisitSheetState extends State<AddVisitSheet> {
   }
 
   Widget _formView() {
-    return SingleChildScrollView(
+    return Column(
       key: const ValueKey("form"),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _header("${widget.customer.firstName} uchun tashrif qo'shish"),
-          const SizedBox(height: 20),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _header("${widget.customer.firstName} uchun tashrif qo'shish"),
+        const SizedBox(height: 20),
 
-          _input("Tashrif Sababi", reasonController),
-          const SizedBox(height: 12),
+        _input("Tashrif Sababi", reasonController),
+        const SizedBox(height: 12),
 
-          _datePicker(),
-          const SizedBox(height: 12),
+        _datePicker(),
+        const SizedBox(height: 12),
 
-          _input("Izohlar (ixtiyoriy)", noteController),
-          const SizedBox(height: 24),
-          _saveButton(),
-        ],
-      ),
+        _input("Izohlar (ixtiyoriy)", noteController),
+        const SizedBox(height: 24),
+        _saveButton(),
+      ],
     );
   }
 

@@ -9,6 +9,7 @@ class VisitCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onMore;
   final bool showCustomerName;
+  final EdgeInsetsGeometry margin;
 
   const VisitCard({
     super.key,
@@ -16,6 +17,7 @@ class VisitCard extends StatelessWidget {
     this.onTap,
     this.onMore,
     this.showCustomerName = false,
+    this.margin = const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
   });
 
   @override
@@ -23,7 +25,7 @@ class VisitCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+        margin: margin,
          padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: OpticaColors.card,

@@ -5,6 +5,7 @@ import '../../services/billing_stats_service.dart';
 import '../../widgets/billing/billing_list_widget.dart';
 import '../../widgets/common/app_loader.dart';
 import '../../widgets/common/stat_card.dart';
+import '../../widgets/common/responsive_frame.dart';
 import 'billing_list_screen.dart';
 
 class BillingDashboardScreen extends StatelessWidget {
@@ -34,20 +35,18 @@ class BillingDashboardScreen extends StatelessWidget {
 
         final data = snapshot.data ?? {};
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ===== STATS GRID =====
-              GridView.count(
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.4,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
+        return ResponsiveFrame(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ===== STATS GRID =====
+                ResponsiveGrid(
+                  minItemWidth: 220,
+                  maxCrossAxisCount: 4,
+                  childAspectRatio: 1.4,
+                  children: [
                   StatCard(
                     title: "Jami to'lov",
                     value: _fmt(data['totalBilled']),
@@ -83,44 +82,45 @@ class BillingDashboardScreen extends StatelessWidget {
                     value: (data['pendingDueCount'] ?? 0).toString(),
                     icon: Icons.schedule,
                   ),
-                ],
-              ),
+                  ],
+                ),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
               // ===== HEADER =====
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Oxirgi xisob kitoblar",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Oxirgi xisob kitoblar",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const BillingListScreen(),
-                        ),
-                      );
-                    },
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const BillingListScreen(),
+                          ),
+                        );
+                      },
 
-                    child: const Text("Barchasini ko'rish"),
-                  ),
-                ],
-              ),
+                      child: const Text("Barchasini ko'rish"),
+                    ),
+                  ],
+                ),
 
-              const SizedBox(height: 8),
+                const SizedBox(height: 8),
 
               // ===== BILLING LIST (NON-SCROLLABLE) =====
-              const BillingListWidget(),
+                const BillingListWidget(),
 
-              const SizedBox(height: 24),
-            ],
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         );
       },
@@ -133,4 +133,3 @@ class BillingDashboardScreen extends StatelessWidget {
     return v.toString();
   }
 }
-

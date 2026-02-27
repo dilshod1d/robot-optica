@@ -29,6 +29,14 @@ class _CustomerSmsLogTabState extends State<CustomerSmsLogTab> {
   bool _hasMore = true;
   DocumentSnapshot? _lastDoc;
 
+  int _columnsForWidth(double width) {
+    const minWidth = 360.0;
+    const maxColumns = 3;
+    if (width <= 0) return 1;
+    final count = (width / minWidth).floor();
+    return count.clamp(1, maxColumns);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -122,34 +130,76 @@ class _CustomerSmsLogTabState extends State<CustomerSmsLogTab> {
           child: _isLoading && _logs.isEmpty
               ? const AppLoader()
               : _logs.isEmpty
-              ? const EmptyState()
-              : NotificationListener<ScrollNotification>(
-            onNotification: (scroll) {
-              if (scroll.metrics.pixels >=
-                  scroll.metrics.maxScrollExtent - 200) {
-                if (!_isLoading && _hasMore) {
-                  _loadMore();
-                }
-              }
-              return false;
-            },
-            child: ListView.builder(
-              itemCount: _logs.length + (_hasMore ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index < _logs.length) {
-                  return SmsLogCard(log: _logs[index]);
-                } else {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: AppLoader(
-                      size: 80,
-                      fill: false,
+                  ? const EmptyState()
+                  : NotificationListener<ScrollNotification>(
+                      onNotification: (scroll) {
+                        if (scroll.metrics.pixels >=
+                            scroll.metrics.maxScrollExtent - 200) {
+                          if (!_isLoading && _hasMore) {
+                            _loadMore();
+                          }
+                        }
+                        return false;
+                      },
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final columns =
+                              _columnsForWidth(constraints.maxWidth);
+                          const spacing = 12.0;
+
+                          if (columns <= 1) {
+                            return ListView.builder(
+                              itemCount: _logs.length + (_hasMore ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (index < _logs.length) {
+                                  return SmsLogCard(log: _logs[index]);
+                                } else {
+                                  return const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: AppLoader(
+                                      size: 80,
+                                      fill: false,
+                                    ),
+                                  );
+                                }
+                              },
+                            );
+                          }
+
+                          final availableWidth =
+                              constraints.maxWidth - (12 * 2);
+                          final itemWidth = (availableWidth -
+                                  (spacing * (columns - 1))) /
+                              columns;
+
+                          return SingleChildScrollView(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              children: [
+                                Wrap(
+                                  spacing: spacing,
+                                  runSpacing: spacing,
+                                  children: _logs.map((log) {
+                                    return SizedBox(
+                                      width: itemWidth,
+                                      child: SmsLogCard(log: log),
+                                    );
+                                  }).toList(),
+                                ),
+                                if (_hasMore)
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: AppLoader(
+                                      size: 80,
+                                      fill: false,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  );
-                }
-              },
-            ),
-          ),
         ),
       ],
     );

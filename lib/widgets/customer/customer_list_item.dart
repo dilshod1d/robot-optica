@@ -5,11 +5,13 @@ import 'package:intl/intl.dart';
 class CustomerListItem extends StatelessWidget {
   final CustomerModel customer;
   final VoidCallback onTap;
+  final EdgeInsetsGeometry margin;
 
   const CustomerListItem({
     super.key,
     required this.customer,
     required this.onTap,
+    this.margin = const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
   });
 
   // Premium optica palette
@@ -28,7 +30,7 @@ class CustomerListItem extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        margin: margin,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -51,6 +53,7 @@ class CustomerListItem extends StatelessWidget {
             _avatar(fullName),
             const SizedBox(width: 14),
             Expanded(child: _info(fullName)),
+            const SizedBox(width: 8),
             const Icon(
               Icons.chevron_right_rounded,
               color: primaryBlue,
@@ -116,7 +119,7 @@ class CustomerListItem extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            _dateTag(customer.createdAt.toDate()),
+            Flexible(child: _dateTag(customer.createdAt.toDate())),
           ],
         ),
         const SizedBox(height: 6),
@@ -147,7 +150,7 @@ class CustomerListItem extends StatelessWidget {
               label: "Tashrif SMS",
               enabled: customer.visitsSmsEnabled,
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             _smsPill(
               label: "To'lov SMS",
               enabled: customer.debtsSmsEnabled,
@@ -166,10 +169,10 @@ class CustomerListItem extends StatelessWidget {
     final Color bgColor = enabled ? softBlue : const Color(0xFFF6F7F9);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: enabled ? borderBlue : Colors.grey.shade300,
         ),
@@ -178,22 +181,22 @@ class CustomerListItem extends StatelessWidget {
         children: [
           Icon(
             Icons.sms_outlined,
-            size: 13.5,
+            size: 12,
             color: color,
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
           Text(
             label,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 10.5,
               fontWeight: FontWeight.w500,
               color: color,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           Container(
-            width: 7,
-            height: 7,
+            width: 6,
+            height: 6,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: enabled ? primaryBlue : Colors.grey,

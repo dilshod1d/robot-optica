@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:robot_optica/widgets/common/app_loader.dart';
+import 'package:robot_optica/widgets/common/responsive_frame.dart';
 
 import '../../models/customer_model.dart';
 import '../../providers/auth_provider.dart';
@@ -71,13 +72,7 @@ class _EditCustomerInfoSheetState extends State<EditCustomerInfoSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).viewPadding.bottom + 20,
-      ),
+    return SheetFrame(
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         child: _saved ? _successView() : _formView(),

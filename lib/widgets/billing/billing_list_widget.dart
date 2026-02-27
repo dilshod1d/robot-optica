@@ -13,6 +13,14 @@ import '../../widgets/billing/reschedule_debt_sheet.dart';
 class BillingListWidget extends StatelessWidget {
   const BillingListWidget({super.key});
 
+  int _columnsForWidth(double width) {
+    const minWidth = 360.0;
+    const maxColumns = 3;
+    if (width <= 0) return 1;
+    final count = (width / minWidth).floor();
+    return count.clamp(1, maxColumns);
+  }
+
   @override
   Widget build(BuildContext context) {
     final opticaId = context.watch<AuthProvider>().opticaId;
@@ -54,36 +62,77 @@ class BillingListWidget extends StatelessWidget {
 
         final list = snapshot.data!;
 
-        return Column(
-          children: list.map((bill) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: BillingItemCard(
-                  bill: bill,
-                  showCustomerName: true,
-                  onPay: bill.remaining > 0
-                      ? () => _pay(context, service, opticaId, bill)
-                      : null,
-                  onEdit: bill.remaining > 0
-                      ? () => _reschedule(context, service, opticaId, bill)
-                      : null,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => BillingDetailScreen(
-                        opticaId: opticaId,
-                        billing: bill,
-                        service: service,
-                      ),
-                    ),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = _columnsForWidth(constraints.maxWidth);
+            const spacing = 12.0;
+
+            if (columns <= 1) {
+              return Column(
+                children: list.map((bill) {
+                  return BillingItemCard(
+                    bill: bill,
+                    showCustomerName: true,
+                    onPay: bill.remaining > 0
+                        ? () => _pay(context, service, opticaId, bill)
+                        : null,
+                    onEdit: bill.remaining > 0
+                        ? () => _reschedule(context, service, opticaId, bill)
+                        : null,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => BillingDetailScreen(
+                            opticaId: opticaId,
+                            billing: bill,
+                            service: service,
+                          ),
+                        ),
+                      );
+                    },
                   );
-                },
+                }).toList(),
+              );
+            }
 
-              ),
+            final availableWidth = constraints.maxWidth;
+            final itemWidth =
+                (availableWidth - (spacing * (columns - 1))) / columns;
 
+            return Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
+              children: list.map((bill) {
+                return SizedBox(
+                  width: itemWidth,
+                  child: BillingItemCard(
+                    bill: bill,
+                    showCustomerName: true,
+                    margin: EdgeInsets.zero,
+                    onPay: bill.remaining > 0
+                        ? () => _pay(context, service, opticaId, bill)
+                        : null,
+                    onEdit: bill.remaining > 0
+                        ? () => _reschedule(context, service, opticaId, bill)
+                        : null,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => BillingDetailScreen(
+                            opticaId: opticaId,
+                            billing: bill,
+                            service: service,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              }).toList(),
             );
-          }).toList(),
+          },
         );
       },
     );

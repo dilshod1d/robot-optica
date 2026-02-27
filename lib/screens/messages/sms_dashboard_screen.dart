@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/sms_log_service.dart';
 import '../../widgets/common/app_loader.dart';
 import '../../widgets/common/stat_card.dart';
+import '../../widgets/common/responsive_frame.dart';
 import 'sms_log_list_screen.dart';
 import 'marketing_sms_screen.dart';
 
@@ -50,60 +51,62 @@ class _SmsDashboardScreenState extends State<SmsDashboardScreen> {
 
           final stats = snapshot.data!;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _sectionTitle("Tashrif smslari"),
-                const SizedBox(height: 12),
-                _grid([
+          return ResponsiveFrame(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _sectionTitle("Tashrif smslari"),
+                  const SizedBox(height: 12),
+                  _grid([
                   StatCard(title: "Bugun", value: stats.visitToday.toString(), icon: Icons.today),
                   StatCard(title: "Oxirgi 7 kun", value: stats.visit7Days.toString(), icon: Icons.date_range),
                   StatCard(title: "Oxirgi 30 kun", value: stats.visit30Days.toString(), icon: Icons.calendar_month),
                   StatCard(title: "Jami", value: stats.visitTotal.toString(), icon: Icons.all_inbox),
                 ]),
 
-                const SizedBox(height: 32),
+                  const SizedBox(height: 32),
 
-                _sectionTitle("Qarz SMSlari"),
-                const SizedBox(height: 12),
-                _grid([
+                  _sectionTitle("Qarz SMSlari"),
+                  const SizedBox(height: 12),
+                  _grid([
                   StatCard(title: "Bugun", value: stats.debtToday.toString(), icon: Icons.today),
                   StatCard(title: "Oxirgi 7 kun", value: stats.debt7Days.toString(), icon: Icons.date_range),
                   StatCard(title: "Oxirgi 30 kun", value: stats.debt30Days.toString(), icon: Icons.calendar_month),
                   StatCard(title: "Jami", value: stats.debtTotal.toString(), icon: Icons.all_inbox),
                 ]),
 
-                _sectionTitle("Harakatlar"),
-                const SizedBox(height: 12),
+                  _sectionTitle("Harakatlar"),
+                  const SizedBox(height: 12),
 
-                _ActionCard(
-                  title: "SMS xabarlar",
-                  subtitle: "Barcha xabarlarni ko'rish",
-                  icon: Icons.list_alt,
-                  color: Colors.indigo,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => SmsLogListScreen(opticaId: widget.opticaId,)),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-                _ActionCard(
-                  title: "Marketing SMS",
-                  subtitle: "Barcha mijozlarga yuborish",
-                  icon: Icons.campaign,
-                  color: Colors.green,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const MarketingSmsScreen()),
-                    );
-                  },
-                ),
-              ],
+                  _ActionCard(
+                    title: "SMS xabarlar",
+                    subtitle: "Barcha xabarlarni ko'rish",
+                    icon: Icons.list_alt,
+                    color: Colors.indigo,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => SmsLogListScreen(opticaId: widget.opticaId,)),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _ActionCard(
+                    title: "Marketing SMS",
+                    subtitle: "Barcha mijozlarga yuborish",
+                    icon: Icons.campaign,
+                    color: Colors.green,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const MarketingSmsScreen()),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -111,12 +114,9 @@ class _SmsDashboardScreenState extends State<SmsDashboardScreen> {
   }
 
   Widget _grid(List<Widget> children) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
+    return ResponsiveGrid(
+      minItemWidth: 200,
+      maxCrossAxisCount: 4,
       childAspectRatio: 1.8,
       children: children,
     );
@@ -225,5 +225,4 @@ class _ActionCard extends StatelessWidget {
     );
   }
 }
-
 

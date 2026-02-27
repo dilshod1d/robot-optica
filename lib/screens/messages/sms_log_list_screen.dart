@@ -6,6 +6,7 @@ import '../../models/sms_log_time_filter.dart';
 import '../../services/sms_log_service.dart';
 import '../../widgets/messages/sms_log_card.dart';
 import '../../widgets/messages/sms_log_filter_bar.dart';
+import '../../widgets/common/responsive_frame.dart';
 
 class SmsLogListScreen extends StatefulWidget {
   final String opticaId;
@@ -27,6 +28,14 @@ class _SmsLogListScreenState extends State<SmsLogListScreen> {
   DocumentSnapshot? _lastDoc;
 
   static const int _pageSize = 20;
+
+  int _columnsForWidth(double width) {
+    const minWidth = 360.0;
+    const maxColumns = 3;
+    if (width <= 0) return 1;
+    final count = (width / minWidth).floor();
+    return count.clamp(1, maxColumns);
+  }
 
   @override
   void initState() {
@@ -117,40 +126,84 @@ class _SmsLogListScreenState extends State<SmsLogListScreen> {
           ),
         ),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: NotificationListener<ScrollNotification>(
-              onNotification: (scroll) {
-                if (scroll.metrics.pixels >=
-                    scroll.metrics.maxScrollExtent - 200) {
-                  if (!_isLoading && _hasMore) {
-                    _loadMore();
+      body: ResponsiveFrame(
+        child: Column(
+          children: [
+            Expanded(
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (scroll) {
+                  if (scroll.metrics.pixels >=
+                      scroll.metrics.maxScrollExtent - 200) {
+                    if (!_isLoading && _hasMore) {
+                      _loadMore();
+                    }
                   }
-                }
-                return false;
-              },
-              child: _logs.isEmpty && !_isLoading
-                  ? const Center(child: Text('SMS tarixi mavjud emas'))
-                  : ListView.builder(
-                itemCount: _logs.length + (_hasMore ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index < _logs.length) {
-                    return SmsLogCard(log: _logs[index]);
-                  } else {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: AppLoader(
-                        size: 80,
-                        fill: false,
-                      ),
-                    );
-                  }
+                  return false;
                 },
+                child: _logs.isEmpty && !_isLoading
+                    ? const Center(child: Text('SMS tarixi mavjud emas'))
+                    : LayoutBuilder(
+                        builder: (context, constraints) {
+                          final columns =
+                              _columnsForWidth(constraints.maxWidth);
+                          const spacing = 12.0;
+
+                          if (columns <= 1) {
+                            return ListView.builder(
+                              itemCount: _logs.length + (_hasMore ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (index < _logs.length) {
+                                  return SmsLogCard(log: _logs[index]);
+                                } else {
+                                  return const Padding(
+                                    padding: EdgeInsets.all(16),
+                                    child: AppLoader(
+                                      size: 80,
+                                      fill: false,
+                                    ),
+                                  );
+                                }
+                              },
+                            );
+                          }
+
+                          final availableWidth =
+                              constraints.maxWidth - (12 * 2);
+                          final itemWidth = (availableWidth -
+                                  (spacing * (columns - 1))) /
+                              columns;
+
+                          return SingleChildScrollView(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              children: [
+                                Wrap(
+                                  spacing: spacing,
+                                  runSpacing: spacing,
+                                  children: _logs.map((log) {
+                                    return SizedBox(
+                                      width: itemWidth,
+                                      child: SmsLogCard(log: log),
+                                    );
+                                  }).toList(),
+                                ),
+                                if (_hasMore)
+                                  const Padding(
+                                    padding: EdgeInsets.all(16),
+                                    child: AppLoader(
+                                      size: 80,
+                                      fill: false,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -18,6 +18,7 @@ import '../../utils/sms_delay_jitter.dart';
 import '../../utils/sms_sanitizer.dart';
 import '../../utils/sms_types.dart';
 import '../../widgets/common/app_loader.dart';
+import '../../widgets/common/responsive_frame.dart';
 
 class MarketingSmsScreen extends StatefulWidget {
   const MarketingSmsScreen({super.key});
@@ -67,11 +68,13 @@ class _MarketingSmsScreenState extends State<MarketingSmsScreen> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        child: ResponsiveFrame(
+          maxWidth: 1100,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               _infoBanner(),
               const SizedBox(height: 16),
 
@@ -191,7 +194,8 @@ class _MarketingSmsScreenState extends State<MarketingSmsScreen> {
                   onPressed: _canSend() ? _confirmSend : null,
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

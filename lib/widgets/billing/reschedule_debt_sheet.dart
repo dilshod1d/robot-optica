@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:robot_optica/widgets/common/responsive_frame.dart';
 
 class RescheduleDebtResult {
   final DateTime date;
@@ -30,15 +31,7 @@ class RescheduleDebtSheet {
             final dateLabel =
                 MaterialLocalizations.of(context).formatFullDate(selectedDate);
 
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: MediaQuery.of(context).viewInsets.bottom +
-                    MediaQuery.of(context).viewPadding.bottom +
-                    20,
-              ),
+            return SheetFrame(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,

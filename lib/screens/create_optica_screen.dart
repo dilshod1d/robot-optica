@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/common/app_loader.dart';
+import '../widgets/common/responsive_frame.dart';
 
 class CreateOpticaScreen extends StatefulWidget {
   const CreateOpticaScreen({super.key});
@@ -32,8 +33,10 @@ class _CreateOpticaScreenState extends State<CreateOpticaScreen> {
           title: const Text("Optika qo'shing"),
           automaticallyImplyLeading: false,
         ),
-        body: Padding(
+        body: ResponsiveFrame(
+          maxWidth: 560,
           padding: const EdgeInsets.all(16),
+          applyPaddingWhenNarrow: true,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

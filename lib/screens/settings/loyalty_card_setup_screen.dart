@@ -20,6 +20,7 @@ import '../../services/loyalty_card_service.dart';
 import '../../services/loyalty_card_store.dart';
 import '../../services/optica_service.dart';
 import '../../widgets/common/app_loader.dart';
+import '../../widgets/common/responsive_frame.dart';
 import '../../utils/loyalty_utils.dart';
 
 class LoyaltyCardSetupScreen extends StatefulWidget {
@@ -394,101 +395,105 @@ class _LoyaltyCardSetupScreenState extends State<LoyaltyCardSetupScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text("Loyalty karta")),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text(
-            "Loyalty karta sozlamalari",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Global qoidalar",
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _discountCtrl,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      labelText: "Loyalty chegirma (%)",
-                      border: OutlineInputBorder(),
-                      suffixText: "%",
+      body: ResponsiveFrame(
+        maxWidth: 1100,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        applyPaddingWhenNarrow: true,
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: 24),
+          children: [
+            const Text(
+              "Loyalty karta sozlamalari",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Global qoidalar",
+                      style: TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _minPurchaseCtrl,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      labelText: "Minimal xaridlar soni (global)",
-                      helperText: "Chegirma barcha kartalar uchun shu qoidaga ko'ra ishlaydi",
-                      border: OutlineInputBorder(),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _discountCtrl,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: const InputDecoration(
+                        labelText: "Loyalty chegirma (%)",
+                        border: OutlineInputBorder(),
+                        suffixText: "%",
+                      ),
+                      onChanged: (_) => setState(() {}),
                     ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _minPurchaseCtrl,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: const InputDecoration(
+                        labelText: "Minimal xaridlar soni (global)",
+                        helperText: "Chegirma barcha kartalar uchun shu qoidaga ko'ra ishlaydi",
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Karta dizayni",
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      _logoPreview(),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Logo",
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                OutlinedButton.icon(
-                                  onPressed: _pickLogo,
-                                  icon: const Icon(Icons.photo),
-                                  label: const Text("Tanlash"),
-                                ),
-                                if (_logoBytes != null)
-                                  TextButton(
-                                    onPressed: () => setState(() {
-                                      _logoBytes = null;
-                                      _logoBase64 = null;
-                                    }),
-                                    child: const Text("Olib tashlash"),
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Karta dizayni",
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        _logoPreview(),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Logo",
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed: _pickLogo,
+                                    icon: const Icon(Icons.photo),
+                                    label: const Text("Tanlash"),
                                   ),
-                              ],
-                            ),
-                          ],
+                                  if (_logoBytes != null)
+                                    TextButton(
+                                      onPressed: () => setState(() {
+                                        _logoBytes = null;
+                                        _logoBase64 = null;
+                                      }),
+                                      child: const Text("Olib tashlash"),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                   const SizedBox(height: 16),
                   _phoneField(),
                   const SizedBox(height: 12),
@@ -550,7 +555,7 @@ class _LoyaltyCardSetupScreenState extends State<LoyaltyCardSetupScreen> {
           const SizedBox(height: 8),
           _customerSelectCard(customerName),
           const SizedBox(height: 6),
-      const Text(
+          const Text(
             "QR karta yaratilganda unikal bo'ladi. Mijoz keyinroq biriktiriladi.",
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
@@ -603,7 +608,8 @@ class _LoyaltyCardSetupScreenState extends State<LoyaltyCardSetupScreen> {
           const SizedBox(height: 24),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _logoPreview() {

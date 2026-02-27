@@ -8,6 +8,7 @@ import '../../services/sales_service.dart';
 import '../../utils/inventory_categories.dart';
 import '../../widgets/common/app_loader.dart';
 import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/responsive_frame.dart';
 
 class SalesAnalyticsScreen extends StatefulWidget {
   final String opticaId;
@@ -175,11 +176,25 @@ class _SalesAnalyticsScreenState extends State<SalesAnalyticsScreen> {
       );
     }).toList();
 
+    final slowStart = _range == null
+        ? DateTime.now().subtract(const Duration(days: 14))
+        : _range!.start;
+    final slowStartDay = DateTime(
+      slowStart.year,
+      slowStart.month,
+      slowStart.day,
+    );
+
     final fastMoving = insights
         .where((i) => i.qty > 0)
         .toList()
       ..sort((a, b) => b.qty.compareTo(a.qty));
-    final slowMoving = insights.toList()
+    final slowMoving = insights
+        .where((i) {
+          final created = i.product.createdAt.toDate();
+          return !created.isAfter(slowStartDay);
+        })
+        .toList()
       ..sort((a, b) => a.qty.compareTo(b.qty));
 
     final reorderSuggestions = _buildReorderSuggestions(
@@ -301,31 +316,34 @@ class _SalesAnalyticsScreenState extends State<SalesAnalyticsScreen> {
               products: products,
             );
 
-            return Column(
-              children: [
-                _filters(),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.all(12),
-                    children: [
-                      _sectionTitle("Savdo va foyda"),
-                      _metricGrid(analytics),
-                      const SizedBox(height: 16),
-                      _sectionTitle("Tez aylanadigan mahsulotlar"),
-                      _productListCard(analytics.fastMoving, emptyLabel: "Ma'lumot yo'q"),
-                      const SizedBox(height: 16),
-                      _sectionTitle("Sekin aylanadigan mahsulotlar"),
-                      _productListCard(analytics.slowMoving, emptyLabel: "Ma'lumot yo'q"),
-                      const SizedBox(height: 16),
-                      _sectionTitle("Qayta buyurtma tavsiyasi"),
-                      _reorderCard(analytics.reorderSuggestions),
-                      const SizedBox(height: 16),
-                      _sectionTitle("Mavsumiy trend (12 oy)"),
-                      _seasonalCard(analytics.seasonalTrend),
-                    ],
+            return ResponsiveFrame(
+              maxWidth: 1400,
+              child: Column(
+                children: [
+                  _filters(),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.all(12),
+                      children: [
+                        _sectionTitle("Savdo va foyda"),
+                        _metricGrid(analytics),
+                        const SizedBox(height: 16),
+                        _sectionTitle("Tez aylanadigan mahsulotlar"),
+                        _productListCard(analytics.fastMoving, emptyLabel: "Ma'lumot yo'q"),
+                        const SizedBox(height: 16),
+                        _sectionTitle("Sekin aylanadigan mahsulotlar"),
+                        _productListCard(analytics.slowMoving, emptyLabel: "Ma'lumot yo'q"),
+                        const SizedBox(height: 16),
+                        _sectionTitle("Qayta buyurtma tavsiyasi"),
+                        _reorderCard(analytics.reorderSuggestions),
+                        const SizedBox(height: 16),
+                        _sectionTitle("Mavsumiy trend (12 oy)"),
+                        _seasonalCard(analytics.seasonalTrend),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           },
         );
@@ -466,84 +484,75 @@ class _SalesAnalyticsScreenState extends State<SalesAnalyticsScreen> {
         ? ''
         : "Marja ${analytics.marginPercent.toStringAsFixed(1)}%";
 
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _metricCard(
-                title: "Savdo",
-                value: "${_currency.format(analytics.revenue)} UZS",
-                icon: Icons.shopping_bag,
-                subtitle:
-                    "O'rtacha: ${_currency.format(analytics.avgDailyRevenue)} / kun",
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _metricCard(
-                title: "Tannarx",
-                value: "${_currency.format(analytics.cost)} UZS",
-                icon: Icons.inventory_2,
-              ),
-            ),
-          ],
+    final cards = <Widget>[
+      _metricCard(
+        title: "Savdo",
+        value: "${_currency.format(analytics.revenue)} UZS",
+        icon: Icons.shopping_bag,
+        subtitle:
+            "O'rtacha: ${_currency.format(analytics.avgDailyRevenue)} / kun",
+      ),
+      _metricCard(
+        title: "Tannarx",
+        value: "${_currency.format(analytics.cost)} UZS",
+        icon: Icons.inventory_2,
+      ),
+      _metricCard(
+        title: "Chegirma",
+        value: "${_currency.format(analytics.discount)} UZS",
+        icon: Icons.percent,
+      ),
+      _metricCard(
+        title: netLabel,
+        value: "${_currency.format(analytics.netProfit)} UZS",
+        icon: Icons.trending_up,
+        valueColor: netColor,
+        subtitle: marginLabel,
+      ),
+      _metricCard(
+        title: "To'langan",
+        value: "${_currency.format(analytics.paid)} UZS",
+        icon: Icons.payments,
+      ),
+      _metricCard(
+        title: "Qarz",
+        value: "${_currency.format(analytics.due)} UZS",
+        icon: Icons.credit_score,
+        valueColor: analytics.due > 0 ? Colors.orange : Colors.grey.shade700,
+      ),
+      if (analytics.negativeMargin > 0)
+        _metricCard(
+          title: "Salbiy marja (zarar)",
+          value: "${_currency.format(analytics.negativeMargin)} UZS",
+          icon: Icons.warning_amber_rounded,
+          valueColor: Colors.red,
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _metricCard(
-                title: "Chegirma",
-                value: "${_currency.format(analytics.discount)} UZS",
-                icon: Icons.percent,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _metricCard(
-                title: netLabel,
-                value: "${_currency.format(analytics.netProfit)} UZS",
-                icon: Icons.trending_up,
-                valueColor: netColor,
-                subtitle: marginLabel,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _metricCard(
-                title: "To'langan",
-                value: "${_currency.format(analytics.paid)} UZS",
-                icon: Icons.payments,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _metricCard(
-                title: "Qarz",
-                value: "${_currency.format(analytics.due)} UZS",
-                icon: Icons.credit_score,
-                valueColor:
-                    analytics.due > 0 ? Colors.orange : Colors.grey.shade700,
-              ),
-            ),
-          ],
-        ),
-        if (analytics.negativeMargin > 0) ...[
-          const SizedBox(height: 12),
-          _metricCard(
-            title: "Salbiy marja (zarar)",
-            value: "${_currency.format(analytics.negativeMargin)} UZS",
-            icon: Icons.warning_amber_rounded,
-            valueColor: Colors.red,
-          ),
-        ],
-      ],
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 12.0;
+        final columns = _metricColumnsForWidth(constraints.maxWidth);
+        final itemWidth =
+            (constraints.maxWidth - (spacing * (columns - 1))) / columns;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: cards
+              .map((card) => SizedBox(width: itemWidth, child: card))
+              .toList(),
+        );
+      },
     );
+  }
+
+  int _metricColumnsForWidth(double width) {
+    const minWidth = 260.0;
+    const maxColumns = 4;
+    if (width <= 0) return 1;
+    final count = (width / minWidth).floor();
+    return count.clamp(1, maxColumns);
   }
 
   Widget _metricCard({
@@ -634,57 +643,34 @@ class _SalesAnalyticsScreenState extends State<SalesAnalyticsScreen> {
                 style: const TextStyle(color: Colors.grey),
               ),
             )
-          : Column(
-              children: items.map((item) {
-                final label = inventoryCategoryLabel(item.product.category);
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.product.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              label,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = _listColumnsForWidth(constraints.maxWidth);
+                const spacing = 10.0;
+                if (columns <= 1) {
+                  return Column(
+                    children:
+                        items.map((item) => _productInsightRow(item)).toList(),
+                  );
+                }
+
+                final itemWidth =
+                    (constraints.maxWidth - (spacing * (columns - 1))) /
+                        columns;
+
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: items
+                      .map(
+                        (item) => SizedBox(
+                          width: itemWidth,
+                          child: _productInsightRow(item),
                         ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            "${item.qty} dona",
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            "${_currency.format(item.revenue)} UZS",
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                      )
+                      .toList(),
                 );
-              }).toList(),
+              },
             ),
     );
   }
@@ -711,56 +697,200 @@ class _SalesAnalyticsScreenState extends State<SalesAnalyticsScreen> {
                 style: TextStyle(color: Colors.grey),
               ),
             )
-          : Column(
-              children: items.map((item) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.product.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              "Sotuv tezligi: ${item.dailyVelocity.toStringAsFixed(2)} / kun",
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = _listColumnsForWidth(constraints.maxWidth);
+                const spacing = 10.0;
+                if (columns <= 1) {
+                  return Column(
+                    children:
+                        items.map((item) => _reorderRow(item)).toList(),
+                  );
+                }
+
+                final itemWidth =
+                    (constraints.maxWidth - (spacing * (columns - 1))) /
+                        columns;
+
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: items
+                      .map(
+                        (item) => SizedBox(
+                          width: itemWidth,
+                          child: _reorderRow(item),
                         ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            "Stok: ${item.product.stockQty}",
-                            style: const TextStyle(fontSize: 11),
-                          ),
-                          Text(
-                            "Tavsiya: ${item.recommendedQty}",
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.redAccent,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                      )
+                      .toList(),
                 );
-              }).toList(),
+              },
             ),
+    );
+  }
+
+  int _listColumnsForWidth(double width) {
+    if (width < 520) return 1;
+    if (width < 820) return 2;
+    if (width < 1120) return 3;
+    return 4;
+  }
+
+  Widget _productInsightRow(_ProductInsight item) {
+    final label = inventoryCategoryLabel(item.product.category);
+    return _analyticsProductCard(
+      title: item.product.name,
+      category: label,
+      topRight: _pill(
+        "${item.qty}x",
+        background: Colors.blue.withOpacity(0.12),
+        foreground: Colors.blue.shade700,
+      ),
+      footer: Row(
+        children: [
+          Text(
+            "${_currency.format(item.revenue)} UZS",
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 11,
+            ),
+          ),
+          const Spacer(),
+          _pill(
+            "Stok: ${item.product.stockQty}",
+            background: Colors.green.withOpacity(0.12),
+            foreground: Colors.green.shade700,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _reorderRow(_ReorderSuggestion item) {
+    return _analyticsProductCard(
+      title: item.product.name,
+      category: "Qayta buyurtma",
+      topRight: _pill(
+        "Tavsiya: ${item.recommendedQty}",
+        background: Colors.redAccent.withOpacity(0.12),
+        foreground: Colors.redAccent,
+      ),
+      footer: Row(
+        children: [
+          Text(
+            "Tezlik: ${item.dailyVelocity.toStringAsFixed(2)}/kun",
+            style: const TextStyle(
+              fontSize: 10,
+              color: Colors.grey,
+            ),
+          ),
+          const Spacer(),
+          _pill(
+            "Stok: ${item.product.stockQty}",
+            background: Colors.orange.withOpacity(0.12),
+            foreground: Colors.orange.shade700,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _analyticsProductCard({
+    required String title,
+    required String category,
+    required Widget topRight,
+    required Widget footer,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            children: [
+              AspectRatio(
+                aspectRatio: 16 / 10,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.blueGrey.shade50,
+                        Colors.blueGrey.shade100,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.insights_outlined,
+                      size: 26,
+                      color: Colors.blueGrey.shade300,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 6,
+                top: 6,
+                child: _pill(
+                  category,
+                  background: Colors.white.withOpacity(0.9),
+                  foreground: Colors.blueGrey.shade700,
+                ),
+              ),
+              Positioned(right: 6, top: 6, child: topRight),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 6),
+          footer,
+        ],
+      ),
+    );
+  }
+
+  Widget _pill(
+    String label, {
+    required Color background,
+    required Color foreground,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          color: foreground,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 

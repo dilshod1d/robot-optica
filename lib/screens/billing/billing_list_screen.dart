@@ -11,6 +11,7 @@ import '../../widgets/billing/pay_bottom_sheet.dart';
 import '../../widgets/billing/reschedule_debt_sheet.dart';
 import '../../widgets/common/app_loader.dart';
 import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/responsive_frame.dart';
 import 'billing_detail_screen.dart';
 
 
@@ -31,6 +32,14 @@ class BillingListScreen extends StatefulWidget {
 class _BillingListScreenState extends State<BillingListScreen> {
   BillingFilter _selectedFilter = BillingFilter.all;
 
+  int _columnsForWidth(double width) {
+    const minWidth = 360.0;
+    const maxColumns = 3;
+    if (width <= 0) return 1;
+    final count = (width / minWidth).floor();
+    return count.clamp(1, maxColumns);
+  }
+
   @override
   Widget build(BuildContext context) {
     final service = BillingFirebaseService();
@@ -50,56 +59,125 @@ class _BillingListScreenState extends State<BillingListScreen> {
           final list = snapshot.data!;
           final filtered = _applyFilters(list);
 
-          return Column(
-            children: [
-              BillingFilterChips(
-                selected: _selectedFilter,
-                onChanged: (f) => setState(() => _selectedFilter = f),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: filtered.isEmpty
-                    ? EmptyState(
-                        title: widget.dueTodayOnly
-                            ? "Bugun to'lanishi kerak qarzlar yo'q"
-                            : "Hisob-kitoblar yo'q",
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: filtered.length,
-                        itemBuilder: (context, i) {
-                          final bill = filtered[i];
+          return ResponsiveFrame(
+            child: Column(
+              children: [
+                BillingFilterChips(
+                  selected: _selectedFilter,
+                  onChanged: (f) => setState(() => _selectedFilter = f),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: filtered.isEmpty
+                      ? EmptyState(
+                          title: widget.dueTodayOnly
+                              ? "Bugun to'lanishi kerak qarzlar yo'q"
+                              : "Hisob-kitoblar yo'q",
+                        )
+                      : LayoutBuilder(
+                          builder: (context, constraints) {
+                            final columns =
+                                _columnsForWidth(constraints.maxWidth);
+                            const spacing = 12.0;
 
-                          return BillingItemCard(
-                            bill: bill,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => BillingDetailScreen(
-                                    opticaId: opticaId,
-                                    billing: bill,
-                                    service: service,
-                                  ),
-                                ),
+                            if (columns <= 1) {
+                              return ListView.builder(
+                                padding: const EdgeInsets.all(12),
+                                itemCount: filtered.length,
+                                itemBuilder: (context, i) {
+                                  final bill = filtered[i];
+
+                                  return BillingItemCard(
+                                    bill: bill,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => BillingDetailScreen(
+                                            opticaId: opticaId,
+                                            billing: bill,
+                                            service: service,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    onEdit: bill.remaining > 0
+                                        ? () => _reschedule(
+                                              context,
+                                              bill,
+                                              service,
+                                              opticaId,
+                                            )
+                                        : null,
+                                    onPay: bill.remaining > 0
+                                        ? () => _pay(
+                                              context,
+                                              bill,
+                                              service,
+                                              opticaId,
+                                            )
+                                        : null,
+                                  );
+                                },
                               );
-                            },
-                            onEdit: bill.remaining > 0
-                                ? () => _reschedule(
-                                      context,
-                                      bill,
-                                      service,
-                                      opticaId,
-                                    )
-                                : null,
-                            onPay: bill.remaining > 0
-                                ? () => _pay(context, bill, service, opticaId)
-                                : null,
-                          );
-                        },
-                      ),
-              ),
-            ],
+                            }
+
+                            final availableWidth =
+                                constraints.maxWidth - (12 * 2);
+                            final itemWidth = (availableWidth -
+                                    (spacing * (columns - 1))) /
+                                columns;
+
+                            return SingleChildScrollView(
+                              padding: const EdgeInsets.all(12),
+                              child: Wrap(
+                                spacing: spacing,
+                                runSpacing: spacing,
+                                children: filtered.map((bill) {
+                                  return SizedBox(
+                                    width: itemWidth,
+                                    child: BillingItemCard(
+                                      bill: bill,
+                                      margin: EdgeInsets.zero,
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                BillingDetailScreen(
+                                              opticaId: opticaId,
+                                              billing: bill,
+                                              service: service,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      onEdit: bill.remaining > 0
+                                          ? () => _reschedule(
+                                                context,
+                                                bill,
+                                                service,
+                                                opticaId,
+                                              )
+                                          : null,
+                                      onPay: bill.remaining > 0
+                                          ? () => _pay(
+                                                context,
+                                                bill,
+                                                service,
+                                                opticaId,
+                                              )
+                                          : null,
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
           );
         },
       ),

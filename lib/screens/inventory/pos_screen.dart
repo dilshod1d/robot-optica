@@ -12,6 +12,7 @@ import '../../models/sale_item.dart';
 import '../../models/sale_model.dart';
 import '../../screens/inventory/barcode_scanner_screen.dart';
 import '../../utils/barcode_keyboard_listener.dart';
+import '../../utils/inventory_categories.dart';
 import '../../utils/scan_sound.dart';
 import '../../services/customer_service.dart';
 import '../../services/inventory_service.dart';
@@ -19,6 +20,7 @@ import '../../services/loyalty_card_store.dart';
 import '../../services/optica_service.dart';
 import '../../services/sales_service.dart';
 import '../../widgets/common/app_loader.dart';
+import '../../widgets/common/responsive_frame.dart';
 import '../../utils/loyalty_utils.dart';
 
 class PosScreen extends StatefulWidget {
@@ -168,6 +170,218 @@ class _PosScreenState extends State<PosScreen> {
     return _cart.fold(0, (sum, item) => sum + item.total);
   }
 
+  int _productColumnsForWidth(double width) {
+    if (width <= 0) return 1;
+    const minWidth = 160.0;
+    const maxColumns = 10;
+    final count = (width / minWidth).floor();
+    return count.clamp(1, maxColumns);
+  }
+
+  Widget _productTile(ProductModel product, int inCartQty) {
+    final inStock = product.stockQty > 0;
+    final stockColor = inStock ? Colors.green : Colors.red;
+    final categoryLabel =
+        inventoryCategories[product.category] ?? product.category;
+
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: inStock ? () => _addToCart(product) : null,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  AspectRatio(
+                    aspectRatio: 2.2,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(6),
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.blueGrey.shade50,
+                            Colors.blueGrey.shade100,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.remove_red_eye_outlined,
+                          size: 18,
+                          color: Colors.blueGrey.shade300,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 4,
+                    top: 4,
+                    child: _pill(
+                      label: categoryLabel,
+                      background: Colors.white.withOpacity(0.9),
+                      foreground: Colors.blueGrey.shade700,
+                    ),
+                  ),
+                  if (!inStock)
+                    Positioned(
+                      right: 4,
+                      top: 4,
+                      child: _pill(
+                        label: "Tugagan",
+                        background: Colors.red.withOpacity(0.12),
+                        foreground: Colors.red,
+                      ),
+                    ),
+                  if (inCartQty > 0)
+                    Positioned(
+                      right: 4,
+                      bottom: 4,
+                      child: _pill(
+                        label: "${inCartQty}x",
+                        background: Colors.green.withOpacity(0.12),
+                        foreground: Colors.green.shade700,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      product.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 10,
+                        height: 1.1,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (inCartQty > 0)
+                    _pill(
+                      label: "${inCartQty}x",
+                      background: Colors.green.withOpacity(0.12),
+                      foreground: Colors.green.shade700,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 3),
+              Row(
+                children: [
+                  Text(
+                    product.price.toStringAsFixed(0),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    "UZS",
+                    style: TextStyle(
+                      fontSize: 8,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const Spacer(),
+                  _pill(
+                    label: "Stok: ${product.stockQty}",
+                    background: stockColor.withOpacity(0.12),
+                    foreground: stockColor,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 3),
+              SizedBox(
+                width: double.infinity,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 6,
+                          ),
+                          side: BorderSide(color: Colors.grey.shade300),
+                          textStyle: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        onPressed: inStock
+                            ? () => _promptQuantity(product, inCartQty)
+                            : null,
+                        child: Text(
+                          inStock
+                              ? (inCartQty > 0 ? "Qty: $inCartQty" : "Qty")
+                              : "Tugagan",
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.add, size: 18),
+                      onPressed: inStock ? () => _addToCart(product) : null,
+                      tooltip: "Savatga qo'shish",
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _pill({
+    required String label,
+    required Color background,
+    required Color foreground,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 8,
+          color: foreground,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
   bool _addToCartInternal(ProductModel product) {
     final index = _cart.indexWhere((e) => e.product.id == product.id);
     final currentQty = index >= 0 ? _cart[index].quantity : 0;
@@ -191,6 +405,76 @@ class _PosScreenState extends State<PosScreen> {
     if (_addToCartInternal(product)) {
       setState(() {});
     }
+  }
+
+  void _setCartQuantity(ProductModel product, int quantity) {
+    if (quantity <= 0) {
+      _removeFromCartInternal(product);
+      setState(() {});
+      return;
+    }
+
+    final cappedQty = quantity > product.stockQty
+        ? product.stockQty
+        : quantity;
+    if (cappedQty != quantity) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Maksimal miqdor: ${product.stockQty}"),
+        ),
+      );
+    }
+
+    final index = _cart.indexWhere((e) => e.product.id == product.id);
+    if (index >= 0) {
+      _cart[index] = _cart[index].copyWith(quantity: cappedQty);
+    } else {
+      _cart.add(_CartItem(product: product, quantity: cappedQty));
+    }
+    setState(() {});
+  }
+
+  Future<void> _promptQuantity(ProductModel product, int currentQty) async {
+    final controller = TextEditingController(
+      text: currentQty > 0 ? currentQty.toString() : '',
+    );
+
+    final result = await showDialog<int>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Miqdor"),
+          content: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: "Miqdor kiriting",
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Bekor"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final value = int.tryParse(controller.text.trim());
+                if (value == null) {
+                  Navigator.pop(context);
+                  return;
+                }
+                Navigator.pop(context, value);
+              },
+              child: const Text("Qo'shish"),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == null) return;
+    _setCartQuantity(product, result);
   }
 
   void _removeFromCartInternal(ProductModel product) {
@@ -1137,129 +1421,210 @@ class _PosScreenState extends State<PosScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: "Mahsulot nomi yoki shtrix-kod",
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.qr_code_scanner),
-                onPressed: _scanBarcode,
-                tooltip: "Skanerlash",
-              ),
-            ),
-            onChanged: (v) => setState(() => _query = v),
-            onTapOutside: (_) => FocusScope.of(context).unfocus(),
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: "Mahsulot nomi yoki shtrix-kod",
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.qr_code_scanner),
+            onPressed: _scanBarcode,
+            tooltip: "Skanerlash",
           ),
         ),
-        Expanded(
-          child: StreamBuilder<List<ProductModel>>(
-            stream: _inventoryService.watchProducts(widget.opticaId),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const AppLoader();
-              }
+        onChanged: (v) => setState(() => _query = v),
+        onTapOutside: (_) => FocusScope.of(context).unfocus(),
+      ),
+    );
+  }
 
-              if (snapshot.hasError) {
-                print('Error: ${snapshot.error}');
-                return const Center(child: Text("Nimadir noto'g'ri ketdi"));
-              }
+  Widget _buildProductList({required bool isDesktop}) {
+    return StreamBuilder<List<ProductModel>>(
+      stream: _inventoryService.watchProducts(widget.opticaId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const AppLoader();
+        }
 
-              _productsCache = snapshot.data ?? [];
-              final list = _filter(_productsCache);
+        if (snapshot.hasError) {
+          print('Error: ${snapshot.error}');
+          return const Center(child: Text("Nimadir noto'g'ri ketdi"));
+        }
 
-              if (list.isEmpty) {
-                return const Center(child: Text("Mahsulot topilmadi"));
-              }
+        _productsCache = snapshot.data ?? [];
+        final list = _filter(_productsCache);
 
+        if (list.isEmpty) {
+          return const Center(child: Text("Mahsulot topilmadi"));
+        }
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = _productColumnsForWidth(constraints.maxWidth);
+
+            if (columns <= 1) {
               return ListView.separated(
-                padding: const EdgeInsets.only(left: 12, right: 12, bottom: 90),
+                padding: EdgeInsets.only(
+                  left: 12,
+                  right: 12,
+                  bottom: isDesktop ? 16 : 90,
+                ),
                 itemCount: list.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {
                   final product = list[index];
                   final inCart = _cart.firstWhere(
-                        (e) => e.product.id == product.id,
+                    (e) => e.product.id == product.id,
                     orElse: () => _CartItem(product: product, quantity: 0),
                   );
-
-                  return Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                product.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                "${product.price.toStringAsFixed(0)} UZS",
-                                style: const TextStyle(fontSize: 12, color: Colors.grey),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                "Stok: ${product.stockQty}",
-                                style: const TextStyle(fontSize: 12, color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (inCart.quantity > 0)
-                          Container(
-                            margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              "${inCart.quantity}x",
-                              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(64, 36),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                          ),
-                          onPressed: product.stockQty <= 0 ? null : () => _addToCart(product),
-                          child: const Text("Qo'shish"),
-                        ),
-                      ],
-                    ),
-                  );
+                  return _productTile(product, inCart.quantity);
                 },
               );
-            },
+            }
+
+            const spacing = 4.0;
+            final availableWidth = constraints.maxWidth - (12 * 2);
+            final itemWidth =
+                (availableWidth - (spacing * (columns - 1))) / columns;
+
+            return SingleChildScrollView(
+              padding: EdgeInsets.only(
+                left: 4,
+                right: 4,
+                bottom: isDesktop ? 16 : 90,
+              ),
+              child: Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
+                children: list.map((product) {
+                  final inCart = _cart.firstWhere(
+                    (e) => e.product.id == product.id,
+                    orElse: () => _CartItem(product: product, quantity: 0),
+                  );
+                  return SizedBox(
+                    width: itemWidth,
+                    child: _productTile(product, inCart.quantity),
+                  );
+                }).toList(),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildCartRow(_CartItem item) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.product.name,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                "${item.product.price.toStringAsFixed(0)} UZS",
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+              ),
+            ],
           ),
         ),
+        IconButton(
+          onPressed: () => _removeFromCart(item.product),
+          icon: const Icon(Icons.remove_circle_outline),
+        ),
+        Text(item.quantity.toString()),
+        IconButton(
+          onPressed: () => _addToCart(item.product),
+          icon: const Icon(Icons.add_circle_outline),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          item.total.toStringAsFixed(0),
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCartPanel() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Savat",
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: _cart.isEmpty
+                ? const Center(
+                    child: Text(
+                      "Savat bo'sh",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                : ListView.separated(
+                    itemCount: _cart.length,
+                    separatorBuilder: (_, __) => const Divider(height: 16),
+                    itemBuilder: (context, index) {
+                      final item = _cart[index];
+                      return _buildCartRow(item);
+                    },
+                  ),
+          ),
+          const Divider(height: 16),
+          Row(
+            children: [
+              const Text(
+                "Jami",
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const Spacer(),
+              Text(
+                "${_total.toStringAsFixed(0)} UZS",
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _cart.isEmpty ? null : _checkout,
+              child: const Text("To'lov"),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileLayout() {
+    return Column(
+      children: [
+        _buildSearchBar(),
+        Expanded(child: _buildProductList(isDesktop: false)),
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -1295,6 +1660,43 @@ class _PosScreenState extends State<PosScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildDesktopLayout() {
+    return Row(
+      children: [
+        Expanded(
+          flex: 3,
+          child: Column(
+            children: [
+              _buildSearchBar(),
+              Expanded(child: _buildProductList(isDesktop: true)),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        SizedBox(
+          width: 360,
+          child: _buildCartPanel(),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width >= 900;
+    if (!isDesktop) {
+      return _buildMobileLayout();
+    }
+
+    return ResponsiveFrame(
+      maxWidth: 1800,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 12, bottom: 12),
+        child: _buildDesktopLayout(),
+      ),
     );
   }
 }

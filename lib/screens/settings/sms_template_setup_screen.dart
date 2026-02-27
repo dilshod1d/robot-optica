@@ -4,6 +4,7 @@ import '../../services/optica_service.dart';
 import '../../utils/sms_template_defaults.dart';
 import '../../utils/sms_types.dart';
 import '../../optica_theme.dart';
+import '../../widgets/common/responsive_frame.dart';
 
 class SmsTemplateSetupScreen extends StatefulWidget {
   final String opticaId;
@@ -305,11 +306,15 @@ class _SmsTemplateSetupScreenState extends State<SmsTemplateSetupScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+          : ResponsiveFrame(
+              maxWidth: 1100,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              applyPaddingWhenNarrow: true,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   const Text(
                     "Shablonlar SMS tiliga qarab yuboriladi. Har bir bo‘limni tahrir qiling va kerakli o‘zgaruvchilarni qo‘shing.",
                     style: TextStyle(color: OpticaColors.textSecondary),
@@ -347,27 +352,28 @@ class _SmsTemplateSetupScreenState extends State<SmsTemplateSetupScreen> {
                     ),
                     const SizedBox(height: 16),
                   ],
-                  _TemplateEditor(
-                    section: const _TemplateSection(
-                      title: "Retsept (har bir dori qatori)",
-                      type: "prescription-item",
-                      variables: [
-                        '{index}',
-                        '{itemName}',
-                        '{itemInstruction}',
-                        '{itemDosage}',
-                        '{itemDuration}',
-                        '{itemNotes}',
-                      ],
+                    _TemplateEditor(
+                      section: const _TemplateSection(
+                        title: "Retsept (har bir dori qatori)",
+                        type: "prescription-item",
+                        variables: [
+                          '{index}',
+                          '{itemName}',
+                          '{itemInstruction}',
+                          '{itemDosage}',
+                          '{itemDuration}',
+                          '{itemNotes}',
+                        ],
+                      ),
+                      controller: isLatin
+                          ? _prescriptionItemLatinCtrl
+                          : _prescriptionItemCyrillicCtrl,
+                      focusNode: _prescriptionItemFocus,
+                      onInsert: _insertVariable,
+                      onReset: _resetItemTemplateToDefault,
                     ),
-                    controller: isLatin
-                        ? _prescriptionItemLatinCtrl
-                        : _prescriptionItemCyrillicCtrl,
-                    focusNode: _prescriptionItemFocus,
-                    onInsert: _insertVariable,
-                    onReset: _resetItemTemplateToDefault,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
     );

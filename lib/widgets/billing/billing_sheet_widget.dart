@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:robot_optica/widgets/common/app_loader.dart';
+import 'package:robot_optica/widgets/common/responsive_frame.dart';
 import '../../models/billing_model.dart';
 import '../../models/customer_model.dart';
 import '../../services/billing_service.dart';
@@ -147,13 +148,7 @@ class _BillingSheetState extends State<BillingSheet> {
     final paid = double.tryParse(paidController.text) ?? 0;
     final remaining = total > paid ? total - paid : 0.0;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).viewPadding.bottom + 20,
-      ),
+    return SheetFrame(
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         child: _saved ? _successView(remaining) : _formView(remaining),
@@ -162,38 +157,36 @@ class _BillingSheetState extends State<BillingSheet> {
   }
 
   Widget _formView(double remaining) {
-    return SingleChildScrollView(
+    return Column(
       key: const ValueKey("form"),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _header("Hisob-kitob"),
-          const SizedBox(height: 20),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _header("Hisob-kitob"),
+        const SizedBox(height: 20),
 
-          _input("Jami summa", totalController, TextInputType.number),
+        _input("Jami summa", totalController, TextInputType.number),
+        const SizedBox(height: 12),
+
+        _input("To'langan summa", paidController, TextInputType.number),
+        const SizedBox(height: 12),
+
+        _statusRow(remaining),
+        const SizedBox(height: 12),
+        if (status != BillingStatusUI.paid) ...[
           const SizedBox(height: 12),
-
-          _input("To'langan summa", paidController, TextInputType.number),
-          const SizedBox(height: 12),
-
-          _statusRow(remaining),
-          const SizedBox(height: 12),
-          if (status != BillingStatusUI.paid) ...[
-            const SizedBox(height: 12),
-            _dueDatePicker(),
-          ],
-
-
-          _input("Nima uchun? (ixtiyoriy)", forController, TextInputType.text),
-          const SizedBox(height: 16),
-
-          if ((double.tryParse(paidController.text) ?? 0) > 0)
-            _paymentMethodSelector(),
-
-          const SizedBox(height: 24),
-          _saveButton(),
+          _dueDatePicker(),
         ],
-      ),
+
+
+        _input("Nima uchun? (ixtiyoriy)", forController, TextInputType.text),
+        const SizedBox(height: 16),
+
+        if ((double.tryParse(paidController.text) ?? 0) > 0)
+          _paymentMethodSelector(),
+
+        const SizedBox(height: 24),
+        _saveButton(),
+      ],
     );
   }
 

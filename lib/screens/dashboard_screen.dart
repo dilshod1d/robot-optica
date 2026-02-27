@@ -50,6 +50,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final opticaId = context.watch<AuthProvider>().opticaId;
+    final width = MediaQuery.of(context).size.width;
+    final isDesktop = width >= 1024;
+    final extendRail = width >= 1200;
 
     if (opticaId != null && !_startedListening) {
       _startedListening = true;
@@ -84,91 +87,212 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
 
+    final content = IndexedStack(
+      index: _currentIndex,
+      children: [
+        const MainTab(),
+        const CustomerListScreen(),
+        VisitsDashboardScreen(opticaId: opticaId),
+        const BillingDashboardScreen(),
+        SalesTabScreen(opticaId: opticaId),
+        SmsDashboardScreen(opticaId: opticaId),
+      ],
+    );
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_titles[_currentIndex]),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: FutureBuilder(
-              future: OpticaService().getOpticaById(opticaId),
-              builder: (context, snapshot) {
-                final opticaName = snapshot.data?.name;
+      appBar: isDesktop
+          ? null
+          : AppBar(
+              title: Text(_titles[_currentIndex]),
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FutureBuilder(
+                    future: OpticaService().getOpticaById(opticaId),
+                    builder: (context, snapshot) {
+                      final opticaName = snapshot.data?.name;
 
-                return Row(
-                  children: [
-                    if (opticaName != null && opticaName.isNotEmpty)
-                      SizedBox(
-                        child: Text(
-                          opticaName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
+                      return Row(
+                        children: [
+                          if (opticaName != null && opticaName.isNotEmpty)
+                            SizedBox(
+                              child: Text(
+                                opticaName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
 
-                    IconButton(
-                      icon: const Icon(Icons.settings),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const SettingsScreen(),
+                          IconButton(
+                            icon: const Icon(Icons.settings),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const SettingsScreen(),
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+      body: isDesktop
+          ? Row(
+              children: [
+                NavigationRail(
+                  selectedIndex: _currentIndex,
+                  onDestinationSelected: _onTabTapped,
+                  extended: extendRail,
+                  labelType:
+                      extendRail ? null : NavigationRailLabelType.all,
+                  minWidth: 72,
+                  minExtendedWidth: 200,
+                  backgroundColor: Colors.white,
+                  selectedIconTheme: IconThemeData(
+                    color: Theme.of(context).primaryColor,
+                  ),
+                  selectedLabelTextStyle: TextStyle(
+                    color: Theme.of(context).primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  destinations: const [
+                    NavigationRailDestination(
+                      icon: Icon(Icons.dashboard),
+                      label: Text("Asosiy"),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.people),
+                      label: Text("Xaridorlar"),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.event),
+                      label: Text("Tashriflar"),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.receipt_long),
+                      label: Text("To'lovlar"),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.point_of_sale),
+                      label: Text("Savdo"),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.sms),
+                      label: Text("SMS"),
                     ),
                   ],
-                );
-              },
+                ),
+                const VerticalDivider(width: 1),
+                Expanded(
+                  child: Column(
+                    children: [
+                      _buildDesktopHeader(opticaId),
+                      Expanded(child: content),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : content,
+      bottomNavigationBar: isDesktop
+          ? null
+          : BottomNavigationBar(
+              currentIndex: _currentIndex,
+              onTap: _onTabTapped,
+              type: BottomNavigationBarType.fixed,
+              selectedItemColor: Theme.of(context).primaryColor,
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.dashboard),
+                  label: "Asosiy",
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.people),
+                  label: "Xaridorlar",
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.event),
+                  label: "Tashriflar",
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.receipt_long), // Billing
+                  label: "To'lovlar",
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.point_of_sale),
+                  label: "Savdo",
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.sms),
+                  label: "SMS",
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildDesktopHeader(String opticaId) {
+    return Container(
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade200),
+        ),
+      ),
+      child: Row(
+        children: [
+          Text(
+            _titles[_currentIndex],
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
             ),
           ),
-        ],
-      ),
-
-      body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          const MainTab(),
-          const CustomerListScreen(),
-          VisitsDashboardScreen(opticaId: opticaId),
-          const BillingDashboardScreen(),
-          SalesTabScreen(opticaId: opticaId),
-          SmsDashboardScreen(opticaId: opticaId,),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: _onTabTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Theme.of(context).primaryColor,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: "Asosiy",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people),
-            label: "Xaridorlar",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.event),
-            label: "Tashriflar",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long), // Billing
-            label: "To'lovlar",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.point_of_sale),
-            label: "Savdo",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.sms),
-            label: "SMS",
+          const Spacer(),
+          FutureBuilder(
+            future: OpticaService().getOpticaById(opticaId),
+            builder: (context, snapshot) {
+              final opticaName = snapshot.data?.name ?? '';
+              return Row(
+                children: [
+                  if (opticaName.isNotEmpty)
+                    SizedBox(
+                      child: Text(
+                        opticaName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.settings),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SettingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),

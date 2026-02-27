@@ -50,27 +50,56 @@ class CustomerPrescriptionsWidget extends StatelessWidget {
                 return const Center(child: EmptyState());
               }
 
-              return ListView(
-                padding: const EdgeInsets.only(bottom: 12),
-                children: plans.map((plan) {
-                  return PrescriptionCard(
-                    date: _formatDate(plan.createdAt),
-                    generalAdvice: plan.generalAdvice,
-                    items: plan.items.map((item) {
-                      return PrescriptionItemUI(
-                        title: item.title,
-                        instruction: item.instruction,
-                        dosage: item.dosage.toString(),
-                        duration: item.duration.toString(),
-                      );
-                    }).toList(),
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final width = constraints.maxWidth;
+                  final columns = _columnsForWidth(width);
+                  final spacing = 12.0;
+                  final itemWidth =
+                      (width - (spacing * (columns - 1))) / columns;
+
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Wrap(
+                      spacing: spacing,
+                      runSpacing: spacing,
+                      children: plans
+                          .map(
+                            (plan) => SizedBox(
+                              width: itemWidth,
+                              child: _buildCard(plan),
+                            ),
+                          )
+                          .toList(),
+                    ),
                   );
-                }).toList(),
+                },
               );
             },
           ),
         ),
       ],
+    );
+  }
+
+  int _columnsForWidth(double width) {
+    if (width >= 1200) return 3;
+    if (width >= 700) return 2;
+    return 1;
+  }
+
+  Widget _buildCard(CarePlanModel plan) {
+    return PrescriptionCard(
+      date: _formatDate(plan.createdAt),
+      generalAdvice: plan.generalAdvice,
+      items: plan.items.map((item) {
+        return PrescriptionItemUI(
+          title: item.title,
+          instruction: item.instruction,
+          dosage: item.dosage.toString(),
+          duration: item.duration.toString(),
+        );
+      }).toList(),
     );
   }
 
@@ -93,53 +122,73 @@ class PrescriptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            children: [
-              const Icon(Icons.medical_services, color: Colors.blue),
-              const SizedBox(width: 8),
-              const Text(
-                "Retsept",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const Spacer(),
-              Text(
-                date,
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 620;
+        final itemWidth = isWide
+            ? (constraints.maxWidth - 12) / 2
+            : constraints.maxWidth;
+
+        return Container(
+          padding: const EdgeInsets.all(14),
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              )
             ],
           ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  const Icon(Icons.medical_services, color: Colors.blue),
+                  const SizedBox(width: 8),
+                  const Text(
+                    "Retsept",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const Spacer(),
+                  Text(
+                    date,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ],
+              ),
 
-          const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-          ...items.map((e) => e).toList(),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: items
+                    .map(
+                      (item) => SizedBox(
+                        width: itemWidth,
+                        child: item,
+                      ),
+                    )
+                    .toList(),
+              ),
 
-          if (generalAdvice != null) ...[
-            const Divider(height: 24),
-            Text(
-              "Umumiy tavsiya: $generalAdvice",
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ],
-      ),
+              if (generalAdvice != null) ...[
+                const Divider(height: 24),
+                Text(
+                  "Umumiy tavsiya: $generalAdvice",
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }
